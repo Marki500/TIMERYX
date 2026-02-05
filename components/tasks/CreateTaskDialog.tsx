@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Calendar as CalendarIcon, Flag, Tag, Clock } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useUserStore } from '@/stores/useUserStore'
+import { useProjectStore } from '@/stores/useProjectStore'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
@@ -13,11 +14,13 @@ interface CreateTaskDialogProps {
     isOpen: boolean
     onClose: () => void
     initialDate?: Date | null
+    initialProjectId?: string
 }
 
-export function CreateTaskDialog({ isOpen, onClose, initialDate }: CreateTaskDialogProps) {
+export function CreateTaskDialog({ isOpen, onClose, initialDate, initialProjectId }: CreateTaskDialogProps) {
     const { createTask } = useTaskStore()
     const { currentWorkspace } = useUserStore()
+    const { projects, fetchProjects } = useProjectStore() // Use project store
     const supabase = createClient()
 
     const [mounted, setMounted] = useState(false)
@@ -26,8 +29,10 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate }: CreateTaskDia
     const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium')
     const [status, setStatus] = useState<'backlog' | 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled'>('todo')
     const [dueDate, setDueDate] = useState('')
+    const [selectedProjectId, setSelectedProjectId] = useState<string>('') // New state
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showPriorityDropdown, setShowPriorityDropdown] = useState(false)
+    const [showProjectDropdown, setShowProjectDropdown] = useState(false) // New state
 
     // Hydration fix for Portal
     useEffect(() => {
@@ -35,23 +40,44 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate }: CreateTaskDia
         return () => setMounted(false)
     }, [])
 
-    // Update due date when initialDate changes or dialog opens
     useEffect(() => {
         if (isOpen && initialDate) {
             setDueDate(initialDate.toISOString().split('T')[0])
         } else if (isOpen && !initialDate) {
             setDueDate('')
         }
-    }, [isOpen, initialDate])
 
-    // Close dropdown when clicking outside
+        // Contextual project pre-selection
+        if (isOpen && initialProjectId) {
+            setSelectedProjectId(initialProjectId)
+        }
+    }, [isOpen, initialDate, initialProjectId])
+
+    // Fetch projects on mount or workspace change
     useEffect(() => {
-        const handleClickOutside = () => setShowPriorityDropdown(false)
-        if (showPriorityDropdown) {
+        if (currentWorkspace) {
+            fetchProjects(currentWorkspace.id)
+        }
+    }, [currentWorkspace, fetchProjects])
+
+    // Set default project if available and none selected
+    useEffect(() => {
+        if (!selectedProjectId && projects.length > 0) {
+            // Optional: Default to first project or "Inbox" if we had one
+            // setSelectedProjectId(projects[0].id)
+        }
+    }, [projects, selectedProjectId])
+
+    useEffect(() => {
+        const handleClickOutside = () => {
+            setShowPriorityDropdown(false)
+            setShowProjectDropdown(false)
+        }
+        if (showPriorityDropdown || showProjectDropdown) {
             document.addEventListener('click', handleClickOutside)
             return () => document.removeEventListener('click', handleClickOutside)
         }
-    }, [showPriorityDropdown])
+    }, [showPriorityDropdown, showProjectDropdown])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -59,27 +85,32 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate }: CreateTaskDia
 
         setIsSubmitting(true)
         try {
-            let projectId: string | undefined
-            const { data: projects } = await supabase
-                .from('projects')
-                .select('id')
-                .eq('workspace_id', (currentWorkspace as any).id)
-                .limit(1)
+            let finalProjectId = selectedProjectId
 
-            if (projects && projects.length > 0) {
-                projectId = (projects as any)[0].id
-            } else {
-                const { data: newProject } = await supabase
+            // If no project selected, create or find 'Inbox' (Legacy logic kept as fallback, but ideally user selects)
+            if (!finalProjectId) {
+                const { data: inboxProject } = await supabase
                     .from('projects')
-                    .insert({
-                        workspace_id: (currentWorkspace as any).id,
-                        name: 'Inbox',
-                        color: '#3b82f6',
-                        budget_hours_monthly: 0
-                    } as any)
-                    .select()
+                    .select('id')
+                    .eq('workspace_id', currentWorkspace.id)
+                    .eq('name', 'Inbox')
                     .single()
-                projectId = (newProject as any)?.id
+
+                if (inboxProject) {
+                    finalProjectId = inboxProject.id
+                } else {
+                    const { data: newProject } = await supabase
+                        .from('projects')
+                        .insert({
+                            workspace_id: currentWorkspace.id,
+                            name: 'Inbox',
+                            color: '#3b82f6',
+                            budget_hours_monthly: 0
+                        } as any)
+                        .select()
+                        .single()
+                    finalProjectId = (newProject as any)?.id
+                }
             }
 
             await createTask({
@@ -87,7 +118,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate }: CreateTaskDia
                 description,
                 priority,
                 status,
-                project_id: projectId,
+                project_id: finalProjectId,
                 due_date: dueDate ? new Date(dueDate).toISOString() : null,
             })
 
@@ -95,6 +126,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate }: CreateTaskDia
             setTitle('')
             setDescription('')
             setPriority('medium')
+            setSelectedProjectId('')
         } catch (error) {
             console.error('Failed to create task:', error)
         } finally {
@@ -104,7 +136,6 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate }: CreateTaskDia
 
     if (!mounted) return null
 
-    // Use Portal to render outside of the Dashboard layout constraints
     return createPortal(
         <AnimatePresence>
             {isOpen && (
@@ -153,12 +184,56 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate }: CreateTaskDia
                                 </div>
 
                                 <div className="flex flex-wrap gap-3 pt-2">
+                                    {/* Project Selector */}
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setShowProjectDropdown(!showProjectDropdown)
+                                                setShowPriorityDropdown(false)
+                                            }}
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-zinc-300 transition-colors border border-transparent hover:border-white/10"
+                                        >
+                                            <Tag size={14} className={cn(selectedProjectId ? "text-primary-400" : "text-zinc-500")} />
+                                            {selectedProjectId
+                                                ? projects.find(p => p.id === selectedProjectId)?.name || 'Project'
+                                                : 'Select Project'}
+                                        </button>
+                                        {showProjectDropdown && (
+                                            <div className="absolute top-full left-0 mt-2 w-48 bg-[#18181b] border border-white/10 rounded-xl shadow-xl overflow-hidden z-20 max-h-60 overflow-y-auto">
+                                                {projects.length === 0 ? (
+                                                    <div className="px-4 py-2 text-sm text-zinc-500">No projects found</div>
+                                                ) : (
+                                                    projects.map((project) => (
+                                                        <button
+                                                            key={project.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSelectedProjectId(project.id)
+                                                                setShowProjectDropdown(false)
+                                                            }}
+                                                            className="w-full text-left px-4 py-2 text-sm text-zinc-400 hover:bg-white/5 hover:text-white flex items-center gap-2"
+                                                        >
+                                                            <div
+                                                                className="w-2 h-2 rounded-full"
+                                                                style={{ backgroundColor: project.color }}
+                                                            />
+                                                            {project.name}
+                                                        </button>
+                                                    ))
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div className="relative">
                                         <button
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation()
                                                 setShowPriorityDropdown(!showPriorityDropdown)
+                                                setShowProjectDropdown(false)
                                             }}
                                             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-zinc-300 transition-colors border border-transparent hover:border-white/10"
                                         >
@@ -203,7 +278,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate }: CreateTaskDia
                                                 className="bg-transparent text-zinc-300 text-sm outline-none cursor-pointer"
                                                 style={{
                                                     colorScheme: 'dark',
-                                                    width: '140px'
+                                                    width: '120px'
                                                 }}
                                             />
                                         </div>

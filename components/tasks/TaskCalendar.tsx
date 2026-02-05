@@ -78,8 +78,8 @@ export function TaskCalendar({ onDateClick }: TaskCalendarProps) {
 
             {/* Calendar Grid */}
             <div className="flex-1 flex flex-col border border-white/10 rounded-2xl overflow-hidden bg-[#0A0A0A]/50 backdrop-blur-sm shadow-xl">
-                {/* Weekday Headers */}
-                <div className="grid grid-cols-7 border-b border-white/10 bg-white/[0.02]">
+                {/* Weekday Headers - Fixed at top */}
+                <div className="grid grid-cols-7 border-b border-white/10 bg-white/[0.02] flex-shrink-0">
                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                         <div key={day} className="py-3 text-center text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                             {day}
@@ -87,11 +87,12 @@ export function TaskCalendar({ onDateClick }: TaskCalendarProps) {
                     ))}
                 </div>
 
-                {/* Days Grid */}
-                <div className="flex-1 grid grid-rows-5 lg:grid-rows-auto">
-                    {weeks.map((week, weekIndex) => (
-                        <div key={weekIndex} className="grid grid-cols-7 min-h-[120px]">
-                            {week.map((day, dayIndex) => {
+                {/* Days Grid - Scrollable */}
+                <div className="flex-1 overflow-y-auto min-h-[500px] lg:min-h-[600px]">
+                    <div className="grid grid-cols-7 auto-rows-fr min-h-full">
+                        {weeks.map((week, weekIndex) => (
+                            // Flattening structure slightly or just fragments
+                            week.map((day, dayIndex) => {
                                 const dayTasks = getTasksForDay(day)
                                 const isCurrentMonth = isSameMonth(day, monthStart)
                                 const isTodayDate = isToday(day)
@@ -101,7 +102,7 @@ export function TaskCalendar({ onDateClick }: TaskCalendarProps) {
                                         key={day.toString()}
                                         onClick={() => onDateClick?.(day)}
                                         className={cn(
-                                            "relative p-2 border-r border-b border-white/[0.05] transition-colors group cursor-pointer",
+                                            "min-h-[120px] p-2 border-r border-b border-white/[0.05] transition-colors group cursor-pointer",
                                             !isCurrentMonth && "bg-white/[0.01] opacity-50 hover:opacity-100",
                                             isCurrentMonth && "hover:bg-white/[0.04]"
                                         )}
@@ -145,9 +146,9 @@ export function TaskCalendar({ onDateClick }: TaskCalendarProps) {
                                         </div>
                                     </div>
                                 )
-                            })}
-                        </div>
-                    ))}
+                            })
+                        ))}
+                    </div>
                 </div>
             </div>
         </div >

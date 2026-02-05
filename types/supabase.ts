@@ -48,6 +48,9 @@ export interface Database {
                     name: string
                     slug: string
                     owner_id: string
+                    description: string | null
+                    color: string | null
+                    icon: string | null
                 }
                 Insert: {
                     id?: string
@@ -55,6 +58,9 @@ export interface Database {
                     name: string
                     slug: string
                     owner_id: string
+                    description?: string | null
+                    color?: string | null
+                    icon?: string | null
                 }
                 Update: {
                     id?: string
@@ -62,6 +68,9 @@ export interface Database {
                     name?: string
                     slug?: string
                     owner_id?: string
+                    description?: string | null
+                    color?: string | null
+                    icon?: string | null
                 }
             }
             workspace_members: {
@@ -184,6 +193,39 @@ export interface Database {
                     is_manual?: boolean
                     description?: string | null
                 }
+
+            }
+            workspace_invitations: {
+                Row: {
+                    id: string
+                    workspace_id: string
+                    email: string
+                    role: string
+                    invited_by: string | null
+                    token: string
+                    expires_at: string
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    workspace_id: string
+                    email: string
+                    role?: string
+                    invited_by?: string | null
+                    token: string
+                    expires_at: string
+                    created_at?: string
+                }
+                Update: {
+                    id?: string
+                    workspace_id?: string
+                    email?: string
+                    role?: string
+                    invited_by?: string | null
+                    token?: string
+                    expires_at?: string
+                    created_at?: string
+                }
             }
         }
     }
@@ -211,6 +253,12 @@ export interface Database {
                 p_slug: string
             }
             Returns: string // UUID
+        }
+        get_tasks_with_duration: {
+            Args: {
+                p_project_id?: string | null
+            }
+            Returns: (Database['public']['Tables']['tasks']['Row'] & { total_duration: number })[]
         }
     }
 }

@@ -14,7 +14,11 @@ import {
     LogOut,
     ChevronLeft,
     ChevronRight,
-    PieChart
+    PieChart,
+    LayoutGrid,
+    CheckSquare,
+    Folder,
+    Calendar
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -27,17 +31,19 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
     const pathname = usePathname()
 
     const links = [
-        { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-        { href: '/dashboard/projects', label: 'Projects', icon: FolderKanban },
-        { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
-        { href: '/dashboard/chat', label: 'Messages', icon: MessageSquare },
-        { href: '/dashboard/reports', label: 'Reports', icon: PieChart },
+        { icon: LayoutGrid, label: 'Dashboard', href: '/dashboard' },
+        { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
+        { icon: Folder, label: 'Projects', href: '/projects' },
+        { icon: Calendar, label: 'Calendar', href: '/calendar' },
+        { href: '/time', label: 'Time Tracking', icon: Clock },
+        { href: '/chat', label: 'Messages', icon: MessageSquare },
+        { href: '/reports', label: 'Reports', icon: PieChart },
     ]
 
     return (
         <motion.div
             className={cn(
-                "relative flex flex-col h-[calc(100vh-2rem)] my-4 ml-4 rounded-3xl z-20",
+                "hidden lg:flex relative flex-col h-[calc(100vh-2rem)] my-4 ml-4 rounded-3xl z-20",
                 "bg-black/5 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden",
                 collapsed ? "w-20" : "w-64"
             )}

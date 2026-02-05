@@ -1,16 +1,19 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { Loader2 } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginContent() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const nextUrl = searchParams.get('next') || '/dashboard'
     const supabase = createClient()
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -27,7 +30,7 @@ export default function LoginPage() {
             if (error) throw error
 
             if (data.user) {
-                router.push('/dashboard')
+                router.push(nextUrl)
                 router.refresh()
             }
         } catch (err: any) {
@@ -101,7 +104,7 @@ export default function LoginPage() {
                     <div className="mt-6 text-center text-sm">
                         <span className="text-muted-foreground">Don't have an account? </span>
                         <Link
-                            href="/register"
+                            href={`/register${nextUrl !== '/dashboard' ? `?next=${encodeURIComponent(nextUrl)}` : ''}`}
                             className="text-primary-400 hover:text-primary-300 font-medium transition-colors"
                         >
                             Sign up
@@ -115,5 +118,13 @@ export default function LoginPage() {
                 </p>
             </div>
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-primary-500" /></div>}>
+            <LoginContent />
+        </Suspense>
     )
 }

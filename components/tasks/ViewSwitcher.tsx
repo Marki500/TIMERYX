@@ -5,14 +5,20 @@ import { LayoutList, KanbanSquare, CalendarDays } from 'lucide-react'
 import { useTaskStore, ViewMode } from '@/stores/useTaskStore'
 import { cn } from '@/lib/utils'
 
-export function ViewSwitcher() {
+interface ViewSwitcherProps {
+    excludedViews?: ViewMode[]
+}
+
+export function ViewSwitcher({ excludedViews = [] }: ViewSwitcherProps) {
     const { viewMode, setViewMode } = useTaskStore()
 
-    const views: { id: ViewMode; label: string; icon: any }[] = [
+    const allViews: { id: ViewMode; label: string; icon: any }[] = [
         { id: 'table', label: 'List', icon: LayoutList },
         { id: 'kanban', label: 'Board', icon: KanbanSquare },
         { id: 'calendar', label: 'Calendar', icon: CalendarDays },
     ]
+
+    const views = allViews.filter(view => !excludedViews.includes(view.id))
 
     return (
         <div className="flex p-1 bg-black/20 backdrop-blur-md rounded-xl border border-white/5">

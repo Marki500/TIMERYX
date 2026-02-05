@@ -2,14 +2,18 @@ import { create } from 'zustand'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/supabase'
 
-type Task = Database['public']['Tables']['tasks']['Row']
+export type Task = Database['public']['Tables']['tasks']['Row'] & {
+    total_duration?: number
+}
 export type ViewMode = 'table' | 'kanban' | 'calendar'
 
 interface TaskState {
     tasks: Task[]
     isLoading: boolean
     viewMode: ViewMode
+    viewMode: ViewMode
     filterStatus: Task['status'] | 'all'
+    currentProjectId: string | null
 
     // Actions
     setViewMode: (mode: ViewMode) => void
@@ -24,23 +28,18 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     isLoading: false,
     viewMode: 'table',
     filterStatus: 'all',
+    currentProjectId: null,
 
     setViewMode: (mode) => set({ viewMode: mode }),
 
     fetchTasks: async (projectId) => {
-        set({ isLoading: true })
+        set({ isLoading: true, currentProjectId: projectId || null })
         const supabase = createClient()
 
-        let query = supabase
-            .from('tasks')
-            .select('*')
-            .order('created_at', { ascending: false })
-
-        if (projectId) {
-            query = query.eq('project_id', projectId)
-        }
-
-        const { data, error } = await query
+        // Use RPC to get tasks with duration
+        const { data, error } = await (supabase.rpc as any)('get_tasks_with_duration', {
+            p_project_id: projectId || null
+        })
 
         if (error) {
             console.error('Error fetching tasks:', error)
@@ -56,16 +55,12 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
         if (!user) return null
 
-        // For demo purposes, if no project_id, we might fail or need a default.
-        // Assuming UI handles project selection or we have a currentProject in another store.
-
-        // Optimistic update? Maybe later.
         const { data, error } = await supabase
             .from('tasks')
             .insert({
                 ...task,
                 created_by: user.id,
-            } as any) // Cast to any to avoid strict partial checks against Insert type for now
+            } as any)
             .select()
             .single()
 
@@ -74,15 +69,29 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             return null
         }
 
-        set((state) => ({ tasks: [data, ...state.tasks] }))
+        // Only add to local state if:
+        // 1. No filter is active (Dashboard) OR
+        // 2. Task belongs to current project filter
+        const currentProjectId = get().currentProjectId
+        if (!currentProjectId || data.project_id === currentProjectId) {
+            set((state) => ({ tasks: [data, ...state.tasks] }))
+        }
+
         return data
     },
 
     updateTask: async (id, updates) => {
         // Optimistic update
-        set((state) => ({
-            tasks: state.tasks.map(t => t.id === id ? { ...t, ...updates } : t)
-        }))
+        set((state) => {
+            // If project changed and doesn't match current filter, remove it
+            const currentProjectId = state.currentProjectId
+            if (currentProjectId && updates.project_id && updates.project_id !== currentProjectId) {
+                return { tasks: state.tasks.filter(t => t.id !== id) }
+            }
+            return {
+                tasks: state.tasks.map(t => t.id === id ? { ...t, ...updates } : t)
+            }
+        })
 
         const supabase = createClient()
         const { error } = await supabase
@@ -92,7 +101,6 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
         if (error) {
             console.error('Error updating task:', error)
-            // Revert? (Not implemented for simplicity)
         }
     },
 

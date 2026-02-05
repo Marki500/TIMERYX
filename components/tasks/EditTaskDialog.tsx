@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Calendar as CalendarIcon, Flag, Trash2 } from 'lucide-react'
+import { X, Calendar as CalendarIcon, Flag, Trash2, Tag } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
+import { useProjectStore } from '@/stores/useProjectStore'
+import { useUserStore } from '@/stores/useUserStore'
 import { cn } from '@/lib/utils'
 import { Database } from '@/types/supabase'
 
@@ -18,6 +20,8 @@ interface EditTaskDialogProps {
 
 export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
     const { updateTask, deleteTask } = useTaskStore()
+    const { projects, fetchProjects } = useProjectStore()
+    const { currentWorkspace } = useUserStore()
 
     const [mounted, setMounted] = useState(false)
     const [title, setTitle] = useState('')
@@ -25,16 +29,25 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
     const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium')
     const [status, setStatus] = useState<'backlog' | 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled'>('todo')
     const [dueDate, setDueDate] = useState('')
+    const [selectedProjectId, setSelectedProjectId] = useState<string>('')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [showPriorityDropdown, setShowPriorityDropdown] = useState(false)
     const [showStatusDropdown, setShowStatusDropdown] = useState(false)
+    const [showProjectDropdown, setShowProjectDropdown] = useState(false)
 
     // Hydration fix for Portal
     useEffect(() => {
         setMounted(true)
         return () => setMounted(false)
     }, [])
+
+    // Fetch projects on mount or workspace change
+    useEffect(() => {
+        if (currentWorkspace) {
+            fetchProjects(currentWorkspace.id)
+        }
+    }, [currentWorkspace, fetchProjects])
 
     // Populate form when task changes
     useEffect(() => {
@@ -44,6 +57,7 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
             setPriority(task.priority || 'medium')
             setStatus(task.status || 'todo')
             setDueDate(task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : '')
+            setSelectedProjectId(task.project_id || '')
         }
     }, [task, isOpen])
 
@@ -52,13 +66,14 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
         const handleClickOutside = () => {
             setShowPriorityDropdown(false)
             setShowStatusDropdown(false)
+            setShowProjectDropdown(false)
         }
 
-        if (showPriorityDropdown || showStatusDropdown) {
+        if (showPriorityDropdown || showStatusDropdown || showProjectDropdown) {
             document.addEventListener('click', handleClickOutside)
             return () => document.removeEventListener('click', handleClickOutside)
         }
-    }, [showPriorityDropdown, showStatusDropdown])
+    }, [showPriorityDropdown, showStatusDropdown, showProjectDropdown])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -71,6 +86,7 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
                 description,
                 priority,
                 status,
+                project_id: selectedProjectId || undefined,
                 due_date: dueDate ? new Date(dueDate).toISOString() : null,
             })
 
@@ -148,6 +164,50 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
                                 </div>
 
                                 <div className="flex flex-wrap gap-3 pt-2">
+                                    {/* Project Selector */}
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setShowProjectDropdown(!showProjectDropdown)
+                                                setShowPriorityDropdown(false)
+                                                setShowStatusDropdown(false)
+                                            }}
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-zinc-300 transition-colors border border-transparent hover:border-white/10"
+                                        >
+                                            <Tag size={14} className={cn(selectedProjectId ? "text-primary-400" : "text-zinc-500")} />
+                                            {selectedProjectId
+                                                ? projects.find(p => p.id === selectedProjectId)?.name || 'Project'
+                                                : 'Select Project'}
+                                        </button>
+                                        {showProjectDropdown && (
+                                            <div className="absolute top-full left-0 mt-2 w-48 bg-[#18181b] border border-white/10 rounded-xl shadow-xl overflow-hidden z-20 max-h-60 overflow-y-auto">
+                                                {projects.length === 0 ? (
+                                                    <div className="px-4 py-2 text-sm text-zinc-500">No projects found</div>
+                                                ) : (
+                                                    projects.map((project) => (
+                                                        <button
+                                                            key={project.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSelectedProjectId(project.id)
+                                                                setShowProjectDropdown(false)
+                                                            }}
+                                                            className="w-full text-left px-4 py-2 text-sm text-zinc-400 hover:bg-white/5 hover:text-white flex items-center gap-2"
+                                                        >
+                                                            <div
+                                                                className="w-2 h-2 rounded-full"
+                                                                style={{ backgroundColor: project.color }}
+                                                            />
+                                                            {project.name}
+                                                        </button>
+                                                    ))
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {/* Priority Selector */}
                                     <div className="relative">
                                         <button
@@ -155,6 +215,8 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
                                             onClick={(e) => {
                                                 e.stopPropagation()
                                                 setShowPriorityDropdown(!showPriorityDropdown)
+                                                setShowProjectDropdown(false)
+                                                setShowStatusDropdown(false)
                                             }}
                                             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-zinc-300 transition-colors border border-transparent hover:border-white/10"
                                         >

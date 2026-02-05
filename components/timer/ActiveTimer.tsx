@@ -32,9 +32,10 @@ export function ActiveTimer() {
     return (
         <AnimatePresence>
             <motion.div
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 100, opacity: 0 }}
+                initial={{ y: 100, opacity: 0, scale: 0.9 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 100, opacity: 0, scale: 0.9 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 className="fixed bottom-6 right-6 z-50"
             >
                 <div className={cn(
@@ -116,9 +117,7 @@ export function ActiveTimer() {
 
                                 <button
                                     onClick={() => {
-                                        if (confirm('Stop timer and save time entry?')) {
-                                            stopTimer()
-                                        }
+                                        stopTimer()
                                     }}
                                     className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium transition-colors border border-red-500/20"
                                 >

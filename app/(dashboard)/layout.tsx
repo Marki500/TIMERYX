@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Sidebar } from '@/components/layout/Sidebar'
+import { FloatingDock } from '@/components/layout/FloatingDock'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { useUserStore } from '@/stores/useUserStore'
 import { TimerBar } from '@/components/timer/TimerBar'
 import { ActiveTimer } from '@/components/timer/ActiveTimer'
+import { ToastContainer } from '@/components/ui/ToastContainer'
+import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher'
 
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
@@ -16,8 +18,7 @@ export default function DashboardLayout({
 }: {
     children: React.ReactNode
 }) {
-    const [collapsed, setCollapsed] = useState(false)
-    const { setProfile, setWorkspaces, setCurrentWorkspace, currentWorkspace } = useUserStore()
+    const { setProfile, setWorkspaces, setCurrentWorkspace, currentWorkspace, profile } = useUserStore()
     const supabase = createClient()
 
     useEffect(() => {
@@ -35,10 +36,6 @@ export default function DashboardLayout({
             if (profile) setProfile(profile)
 
             // Load Workspaces via Memberships
-            // Note: This is a simplified query. In a real app with RLS, querying 'workspaces' might be restricted
-            // if not joined properly. Assuming 'workspace_members' approach or logic in 'workspaces'
-            // For now, simpler: select all workspaces where I am a member.
-
             const { data: members } = await supabase
                 .from('workspace_members')
                 .select(`
@@ -61,13 +58,13 @@ export default function DashboardLayout({
                 // Generate unique slug
                 const slug = `workspace-${Math.random().toString(36).substring(7)}`
                 const { data: workspaceId, error } = await supabase.rpc('create_workspace', {
+                    // @ts-ignore - Supabase types might be out of sync
                     p_name: 'My Workspace',
                     p_slug: slug
                 })
 
                 if (error) {
                     console.error('Error creating workspace:', error)
-                    // Fallback: This might fail if RPC not created, but we need to try/alert
                 } else if (workspaceId) {
                     // Refresh data
                     loadData()
@@ -90,14 +87,13 @@ export default function DashboardLayout({
                     <div className="absolute inset-0 bg-noise opacity-[0.05] mix-blend-overlay" />
                 </div>
 
-                <div className="relative z-20 flex h-full w-full">
-                    <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-
-                    <main className="flex-1 relative flex flex-col h-screen overflow-hidden">
+                <div className="relative z-20 flex h-full w-full justify-center">
+                    {/* Centered Content Area */}
+                    <main className="flex-1 max-w-7xl relative flex flex-col h-screen overflow-hidden">
                         {/* Dynamic Island Area / Top Bar */}
-                        <div className="h-20 px-8 flex items-center justify-between z-10 shrink-0">
+                        <div className="h-24 px-6 md:px-8 flex items-center justify-between z-10 shrink-0">
                             <div className="flex items-center gap-4">
-                                {/* Breadcrumbs or Page Title could go here */}
+                                <WorkspaceSwitcher />
                             </div>
 
                             {/* Active Timer Pill (Dynamic Island Concept) */}
@@ -105,16 +101,26 @@ export default function DashboardLayout({
 
                             {/* User Profile / Notifications */}
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10" />
+                                {profile?.avatar_url ? (
+                                    <img
+                                        src={profile.avatar_url}
+                                        alt="Profile"
+                                        className="w-10 h-10 rounded-full object-cover border border-white/10"
+                                    />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold border border-white/10">
+                                        {profile?.email?.charAt(0).toUpperCase() || 'U'}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
                         {/* Content Area */}
-                        <div className="flex-1 overflow-y-auto px-6 pb-6 relative z-10">
+                        <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-32 relative z-10 custom-scrollbar">
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="h-full bg-black/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden relative"
+                                className="min-h-full bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 md:p-8 shadow-2xl relative ring-1 ring-white/5"
                             >
                                 {children}
                             </motion.div>
@@ -122,8 +128,14 @@ export default function DashboardLayout({
                     </main>
                 </div>
 
+                {/* Unified Floating Dock */}
+                <FloatingDock />
+
                 {/* Floating Active Timer */}
                 <ActiveTimer />
+
+                {/* Toast Notifications */}
+                <ToastContainer />
             </div>
         </DndProvider>
     )

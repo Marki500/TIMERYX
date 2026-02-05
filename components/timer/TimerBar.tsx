@@ -7,17 +7,11 @@ import { useTimerStore } from '@/stores/useTimerStore'
 import { cn } from '@/lib/utils'
 
 export function TimerBar() {
-    const { activeEntry, duration, fetchActiveTimer, stopTimer, tick, isLoading } = useTimerStore()
+    const { activeEntry, duration, fetchActiveTimer, stopTimer, tick, isLoading, taskTitle } = useTimerStore()
 
     // Initial fetch and interval
     useEffect(() => {
         fetchActiveTimer()
-
-        const interval = setInterval(() => {
-            tick()
-        }, 1000)
-
-        return () => clearInterval(interval)
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     const formatTime = (seconds: number) => {
@@ -33,10 +27,10 @@ export function TimerBar() {
                 <motion.button
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-black/20 backdrop-blur-xl px-6 py-2.5 rounded-full border border-white/10 shadow-lg flex items-center gap-3 hover:bg-white/5 transition-colors group"
+                    className="bg-white/10 backdrop-blur-3xl px-6 py-2.5 rounded-full border border-white/20 shadow-lg shadow-black/20 flex items-center gap-3 hover:bg-white/15 transition-all group ring-1 ring-white/10"
                 >
-                    <div className="w-2 h-2 rounded-full bg-zinc-600 group-hover:bg-primary-500 transition-colors" />
-                    <span className="text-sm font-medium text-zinc-400 group-hover:text-white transition-colors">Start a timer from a task</span>
+                    <div className="w-2 h-2 rounded-full bg-zinc-400 group-hover:bg-primary-400 transition-colors shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
+                    <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">Start a timer from a task</span>
                 </motion.button>
             </div>
         )
@@ -46,7 +40,7 @@ export function TimerBar() {
         <div className="absolute left-1/2 -translate-x-1/2 top-6 z-50">
             <motion.div
                 layoutId="timer-pill"
-                className="bg-black/40 backdrop-blur-2xl px-6 py-2.5 rounded-full border border-white/10 shadow-2xl flex items-center gap-4 cursor-pointer hover:border-white/20 transition-colors"
+                className="bg-white/10 backdrop-blur-3xl px-6 py-2.5 rounded-full border border-white/20 shadow-2xl shadow-black/40 flex items-center gap-4 cursor-pointer hover:bg-white/15 transition-all ring-1 ring-white/10"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
             >
@@ -57,7 +51,7 @@ export function TimerBar() {
                         <span className="text-xs text-zinc-400 font-medium">Tracking</span>
                         <span className="text-sm font-bold text-white leading-none overflow-hidden max-w-[150px] truncate">
                             {/* We might need to join with Task title here if we had relationship, for now using description or Placeholder */}
-                            {activeEntry.description || 'Untitled Task'}
+                            {taskTitle || activeEntry.description || 'Untitled Task'}
                         </span>
                     </div>
                 </div>

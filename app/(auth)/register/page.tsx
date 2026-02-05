@@ -1,17 +1,20 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { Loader2 } from 'lucide-react'
 
-export default function RegisterPage() {
+function RegisterContent() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [fullName, setFullName] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const nextUrl = searchParams.get('next') || '/dashboard'
     const supabase = createClient()
 
     const handleRegister = async (e: React.FormEvent) => {
@@ -34,11 +37,8 @@ export default function RegisterPage() {
             if (authError) throw authError
 
             if (authData.user) {
-                // El perfil se crea automáticamente mediante el Trigger de la base de datos
-                // No necesitamos insertarlo manualmente aquí
-
-                // Redirect to dashboard
-                router.push('/dashboard')
+                // Redirect to nextUrl (accept-invite usually)
+                router.push(nextUrl)
                 router.refresh()
             }
         } catch (err: any) {
@@ -131,7 +131,7 @@ export default function RegisterPage() {
                     <div className="mt-6 text-center text-sm">
                         <span className="text-muted-foreground">Already have an account? </span>
                         <Link
-                            href="/login"
+                            href={`/login${nextUrl !== '/dashboard' ? `?next=${encodeURIComponent(nextUrl)}` : ''}`}
                             className="text-primary-400 hover:text-primary-300 font-medium transition-colors"
                         >
                             Sign in
@@ -145,5 +145,13 @@ export default function RegisterPage() {
                 </p>
             </div>
         </div>
+    )
+}
+
+export default function RegisterPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-primary-500" /></div>}>
+            <RegisterContent />
+        </Suspense>
     )
 }
