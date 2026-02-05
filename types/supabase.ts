@@ -120,10 +120,12 @@ export interface Database {
                     project_id: string
                     title: string
                     description: string | null
-                    priority: 'low' | 'medium' | 'high'
-                    status: 'todo' | 'in_progress' | 'review' | 'done'
+                    priority: 'low' | 'medium' | 'high' | 'urgent'
+                    status: 'backlog' | 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled'
                     due_date: string | null
-                    assignee_id: string | null
+                    assigned_to: string | null
+                    created_by: string
+                    updated_at: string
                 }
                 Insert: {
                     id?: string
@@ -131,10 +133,11 @@ export interface Database {
                     project_id: string
                     title: string
                     description?: string | null
-                    priority?: 'low' | 'medium' | 'high'
-                    status?: 'todo' | 'in_progress' | 'review' | 'done'
+                    priority?: 'low' | 'medium' | 'high' | 'urgent'
+                    status?: 'backlog' | 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled'
                     due_date?: string | null
-                    assignee_id?: string | null
+                    assigned_to?: string | null
+                    created_by: string
                 }
                 Update: {
                     id?: string
@@ -142,10 +145,12 @@ export interface Database {
                     project_id?: string
                     title?: string
                     description?: string | null
-                    priority?: 'low' | 'medium' | 'high'
-                    status?: 'todo' | 'in_progress' | 'review' | 'done'
+                    priority?: 'low' | 'medium' | 'high' | 'urgent'
+                    status?: 'backlog' | 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled'
                     due_date?: string | null
-                    assignee_id?: string | null
+                    assigned_to?: string | null
+                    created_by?: string
+                    updated_at?: string
                 }
             }
             time_entries: {

@@ -1,10 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import { useDrag, useDrop } from 'react-dnd'
 import { motion } from 'framer-motion'
-import { MoreHorizontal, Plus } from 'lucide-react'
+import { MoreHorizontal, Plus, Edit2 } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
+import { EditTaskDialog } from './EditTaskDialog'
 import { cn } from '@/lib/utils'
+import { Database } from '@/types/supabase'
+
+type Task = Database['public']['Tables']['tasks']['Row']
 
 const COLUMNS = [
     { id: 'todo', label: 'To Do', color: 'bg-zinc-500/20 text-zinc-400' },
@@ -15,28 +20,38 @@ const COLUMNS = [
 
 export function TaskKanban() {
     const { tasks, updateTask } = useTaskStore()
+    const [editingTask, setEditingTask] = useState<Task | null>(null)
 
     const handleDrop = (taskId: string, targetStatus: string) => {
         updateTask(taskId, { status: targetStatus as any })
     }
 
     return (
-        <div className="flex gap-6 h-[600px] overflow-x-auto pb-4">
-            {COLUMNS.map((col) => (
-                <KanbanColumn
-                    key={col.id}
-                    status={col.id}
-                    label={col.label}
-                    color={col.color}
-                    tasks={tasks.filter(t => t.status === col.id)}
-                    onDrop={handleDrop}
-                />
-            ))}
-        </div>
+        <>
+            <div className="flex gap-6 h-[600px] overflow-x-auto pb-4">
+                {COLUMNS.map((col) => (
+                    <KanbanColumn
+                        key={col.id}
+                        status={col.id}
+                        label={col.label}
+                        color={col.color}
+                        tasks={tasks.filter(t => t.status === col.id)}
+                        onDrop={handleDrop}
+                        onEditTask={setEditingTask}
+                    />
+                ))}
+            </div>
+
+            <EditTaskDialog
+                isOpen={!!editingTask}
+                onClose={() => setEditingTask(null)}
+                task={editingTask}
+            />
+        </>
     )
 }
 
-function KanbanColumn({ status, label, color, tasks, onDrop }: any) {
+function KanbanColumn({ status, label, color, tasks, onDrop, onEditTask }: any) {
     const [{ isOver }, drop] = useDrop(() => ({
         accept: 'TASK',
         drop: (item: { id: string }) => onDrop(item.id, status),
@@ -68,14 +83,14 @@ function KanbanColumn({ status, label, color, tasks, onDrop }: any) {
 
             <div className="p-3 flex-1 overflow-y-auto space-y-3">
                 {tasks.map((task: any) => (
-                    <KanbanCard key={task.id} task={task} />
+                    <KanbanCard key={task.id} task={task} onEdit={onEditTask} />
                 ))}
             </div>
         </div>
     )
 }
 
-function KanbanCard({ task }: any) {
+function KanbanCard({ task, onEdit }: any) {
     const [{ isDragging }, drag] = useDrag(() => ({
         type: 'TASK',
         item: { id: task.id },
@@ -90,22 +105,30 @@ function KanbanCard({ task }: any) {
             layoutId={task.id}
             initial={{ opacity: 0 }}
             animate={{ opacity: isDragging ? 0.5 : 1 }}
+            onClick={() => onEdit(task)}
             className={cn(
-                "p-4 rounded-xl bg-[#0A0A0A] border border-white/5 shadow-sm hover:border-white/10 cursor-grab active:cursor-grabbing group",
+                "p-4 rounded-xl bg-[#0A0A0A] border border-white/5 shadow-sm hover:border-white/10 cursor-pointer group",
                 isDragging && "opacity-50"
             )}
         >
             <div className="flex items-start justify-between mb-2">
                 <span className={cn(
                     "px-2 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider",
-                    task.priority === 'high' ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                        task.priority === 'medium' ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
-                            "bg-green-500/10 text-green-500 border-green-500/20"
+                    task.priority === 'urgent' ? "bg-purple-500/10 text-purple-500 border-purple-500/20" :
+                        task.priority === 'high' ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                            task.priority === 'medium' ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
+                                "bg-green-500/10 text-green-500 border-green-500/20"
                 )}>
                     {task.priority}
                 </span>
-                <button className="text-zinc-600 hover:text-white opacity-0 group-hover:opacity-100 transition-all">
-                    <MoreHorizontal size={14} />
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onEdit(task)
+                    }}
+                    className="text-zinc-600 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                >
+                    <Edit2 size={14} />
                 </button>
             </div>
 

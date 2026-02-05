@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { useUserStore } from '@/stores/useUserStore'
 import { TimerBar } from '@/components/timer/TimerBar'
+import { ActiveTimer } from '@/components/timer/ActiveTimer'
 
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
@@ -79,46 +80,51 @@ export default function DashboardLayout({
 
 
     return (
-        <div className="flex h-screen w-full bg-[#050505] text-foreground overflow-hidden font-sans selection:bg-primary-500/30 relative">
-            {/* Background Ambience - Auroras */}
-            <div className="fixed inset-0 pointer-events-none z-0">
-                <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-gradient-to-br from-indigo-500/80 via-blue-500/60 to-transparent rounded-full blur-[100px] animate-slow-glow" />
-                <div className="absolute bottom-[-10%] right-[-5%] w-[60%] h-[60%] bg-gradient-to-tl from-purple-500/80 via-primary-500/60 to-transparent rounded-full blur-[80px] animate-slow-glow" style={{ animationDelay: '4s' }} />
-                <div className="absolute top-[20%] right-[20%] w-[40%] h-[40%] bg-blue-400/40 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
-                <div className="absolute inset-0 bg-noise opacity-[0.05] mix-blend-overlay" />
-            </div>
+        <DndProvider backend={HTML5Backend}>
+            <div className="flex h-screen w-full bg-[#050505] text-foreground overflow-hidden font-sans selection:bg-primary-500/30 relative">
+                {/* Background Ambience - Auroras */}
+                <div className="fixed inset-0 pointer-events-none z-0">
+                    <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-gradient-to-br from-indigo-500/80 via-blue-500/60 to-transparent rounded-full blur-[100px] animate-slow-glow" />
+                    <div className="absolute bottom-[-10%] right-[-5%] w-[60%] h-[60%] bg-gradient-to-tl from-purple-500/80 via-primary-500/60 to-transparent rounded-full blur-[80px] animate-slow-glow" style={{ animationDelay: '4s' }} />
+                    <div className="absolute top-[20%] right-[20%] w-[40%] h-[40%] bg-blue-400/40 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
+                    <div className="absolute inset-0 bg-noise opacity-[0.05] mix-blend-overlay" />
+                </div>
 
-            <div className="relative z-20 flex h-full w-full">
-                <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+                <div className="relative z-20 flex h-full w-full">
+                    <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
-                <main className="flex-1 relative flex flex-col h-screen overflow-hidden">
-                    {/* Dynamic Island Area / Top Bar */}
-                    <div className="h-20 px-8 flex items-center justify-between z-10 shrink-0">
-                        <div className="flex items-center gap-4">
-                            {/* Breadcrumbs or Page Title could go here */}
+                    <main className="flex-1 relative flex flex-col h-screen overflow-hidden">
+                        {/* Dynamic Island Area / Top Bar */}
+                        <div className="h-20 px-8 flex items-center justify-between z-10 shrink-0">
+                            <div className="flex items-center gap-4">
+                                {/* Breadcrumbs or Page Title could go here */}
+                            </div>
+
+                            {/* Active Timer Pill (Dynamic Island Concept) */}
+                            <TimerBar />
+
+                            {/* User Profile / Notifications */}
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10" />
+                            </div>
                         </div>
 
-                        {/* Active Timer Pill (Dynamic Island Concept) */}
-                        <TimerBar />
-
-                        {/* User Profile / Notifications */}
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10" />
+                        {/* Content Area */}
+                        <div className="flex-1 overflow-y-auto px-6 pb-6 relative z-10">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="h-full bg-black/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden relative"
+                            >
+                                {children}
+                            </motion.div>
                         </div>
-                    </div>
+                    </main>
+                </div>
 
-                    {/* Content Area */}
-                    <div className="flex-1 overflow-y-auto px-6 pb-6 relative z-10">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="h-full bg-black/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden relative"
-                        >
-                            {children}
-                        </motion.div>
-                    </div>
-                </main>
+                {/* Floating Active Timer */}
+                <ActiveTimer />
             </div>
-        </div>
+        </DndProvider>
     )
 }

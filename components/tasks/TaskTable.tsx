@@ -1,14 +1,20 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { MoreHorizontal, Play, CheckCircle2, Circle, AlertCircle } from 'lucide-react'
+import { MoreHorizontal, Play, CheckCircle2, Circle, AlertCircle, Edit2 } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useTimerStore } from '@/stores/useTimerStore'
+import { EditTaskDialog } from './EditTaskDialog'
 import { cn } from '@/lib/utils'
+import { Database } from '@/types/supabase'
+
+type Task = Database['public']['Tables']['tasks']['Row']
 
 export function TaskTable() {
     const { tasks, isLoading } = useTaskStore()
     const { startTimer, activeEntry } = useTimerStore()
+    const [editingTask, setEditingTask] = useState<Task | null>(null)
 
     if (isLoading) return <div className="text-white/50 p-8">Loading tasks...</div>
 
@@ -92,6 +98,13 @@ export function TaskTable() {
                                         >
                                             <Play size={14} fill="currentColor" />
                                         </button>
+                                        <button
+                                            onClick={() => setEditingTask(task)}
+                                            className="p-2 rounded-lg bg-white/5 hover:bg-blue-500 hover:text-white transition-colors"
+                                            title="Edit Task"
+                                        >
+                                            <Edit2 size={14} />
+                                        </button>
                                         <button className="p-2 rounded-lg hover:bg-white/5 transition-colors">
                                             <MoreHorizontal size={16} />
                                         </button>
@@ -102,6 +115,12 @@ export function TaskTable() {
                     })}
                 </tbody>
             </table>
+
+            <EditTaskDialog
+                isOpen={!!editingTask}
+                onClose={() => setEditingTask(null)}
+                task={editingTask}
+            />
         </div>
     )
 }

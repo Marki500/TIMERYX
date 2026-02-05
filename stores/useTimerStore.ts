@@ -1,3 +1,5 @@
+'use client'
+
 import { create } from 'zustand'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/supabase'
@@ -6,21 +8,53 @@ type TimeEntry = Database['public']['Tables']['time_entries']['Row']
 
 interface TimerState {
     activeEntry: TimeEntry | null
+    taskTitle: string | null
     isLoading: boolean
     duration: number // in seconds
+    isPaused: boolean
+    pausedAt: number | null
 
-    startTimer: (taskId: string, description?: string) => Promise<void>
+    startTimer: (taskId: string, taskTitle: string, description?: string) => Promise<void>
     stopTimer: () => Promise<void>
+    pauseTimer: () => void
+    resumeTimer: () => void
     fetchActiveTimer: () => Promise<void>
     tick: () => void
+    loadFromStorage: () => void
 }
+
+const STORAGE_KEY = 'timeryx_active_timer'
 
 export const useTimerStore = create<TimerState>((set, get) => ({
     activeEntry: null,
+    taskTitle: null,
     isLoading: false,
     duration: 0,
+    isPaused: false,
+    pausedAt: null,
 
-    startTimer: async (taskId, description) => {
+    loadFromStorage: () => {
+        if (typeof window === 'undefined') return
+
+        const stored = localStorage.getItem(STORAGE_KEY)
+        if (stored) {
+            try {
+                const data = JSON.parse(stored)
+                set({
+                    activeEntry: data.activeEntry,
+                    taskTitle: data.taskTitle,
+                    duration: data.duration,
+                    isPaused: data.isPaused,
+                    pausedAt: data.pausedAt
+                })
+            } catch (error) {
+                console.error('Failed to load timer from storage:', error)
+                localStorage.removeItem(STORAGE_KEY)
+            }
+        }
+    },
+
+    startTimer: async (taskId, taskTitle, description) => {
         set({ isLoading: true })
         const supabase = createClient()
 
@@ -38,7 +72,19 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
         // Refresh active timer
         await get().fetchActiveTimer()
-        set({ isLoading: false })
+        set({ taskTitle, isLoading: false, isPaused: false, pausedAt: null })
+
+        // Save to localStorage
+        if (typeof window !== 'undefined') {
+            const state = get()
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                activeEntry: state.activeEntry,
+                taskTitle: state.taskTitle,
+                duration: state.duration,
+                isPaused: state.isPaused,
+                pausedAt: state.pausedAt
+            }))
+        }
     },
 
     stopTimer: async () => {
@@ -51,7 +97,56 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             console.error('Error stopping timer:', error)
         }
 
-        set({ activeEntry: null, duration: 0, isLoading: false })
+        set({
+            activeEntry: null,
+            taskTitle: null,
+            duration: 0,
+            isLoading: false,
+            isPaused: false,
+            pausedAt: null
+        })
+
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem(STORAGE_KEY)
+        }
+    },
+
+    pauseTimer: () => {
+        const { activeEntry } = get()
+        if (!activeEntry) return
+
+        set({ isPaused: true, pausedAt: Date.now() })
+
+        // Save to localStorage
+        if (typeof window !== 'undefined') {
+            const state = get()
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                activeEntry: state.activeEntry,
+                taskTitle: state.taskTitle,
+                duration: state.duration,
+                isPaused: state.isPaused,
+                pausedAt: state.pausedAt
+            }))
+        }
+    },
+
+    resumeTimer: () => {
+        const { activeEntry } = get()
+        if (!activeEntry) return
+
+        set({ isPaused: false, pausedAt: null })
+
+        // Save to localStorage
+        if (typeof window !== 'undefined') {
+            const state = get()
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                activeEntry: state.activeEntry,
+                taskTitle: state.taskTitle,
+                duration: state.duration,
+                isPaused: state.isPaused,
+                pausedAt: state.pausedAt
+            }))
+        }
     },
 
     fetchActiveTimer: async () => {
@@ -71,7 +166,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             const { data: entry } = await supabase
                 .from('time_entries')
                 .select('*')
-                .eq('id', profile.active_timer_id as string) // Cast to string to resolve potential type mismatch with UUID
+                .eq('id', profile.active_timer_id as string)
                 .single()
 
             if (entry) {
@@ -83,14 +178,26 @@ export const useTimerStore = create<TimerState>((set, get) => ({
                 set({ activeEntry: entry, duration: seconds })
             }
         } else {
-            set({ activeEntry: null, duration: 0 })
+            set({ activeEntry: null, taskTitle: null, duration: 0 })
         }
     },
 
     tick: () => {
-        const { activeEntry } = get()
-        if (activeEntry) {
+        const { activeEntry, isPaused } = get()
+        if (activeEntry && !isPaused) {
             set((state) => ({ duration: state.duration + 1 }))
+
+            // Update localStorage periodically
+            if (typeof window !== 'undefined') {
+                const state = get()
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    activeEntry: state.activeEntry,
+                    taskTitle: state.taskTitle,
+                    duration: state.duration,
+                    isPaused: state.isPaused,
+                    pausedAt: state.pausedAt
+                }))
+            }
         }
     }
 }))
