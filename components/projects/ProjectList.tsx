@@ -6,19 +6,23 @@ import { Plus, Folder, Clock, MoreVertical, Trash2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useUserStore } from '@/stores/useUserStore'
+import { useTaskStore } from '@/stores/useTaskStore'
 import { CreateProjectDialog } from './CreateProjectDialog'
-import { formatDuration } from '@/lib/utils' // Assuming this helper exists or I'll inline it
+import { formatDuration } from '@/lib/utils'
 
 export function ProjectList() {
     const { projects, fetchProjects, deleteProject, isLoading } = useProjectStore()
     const { currentWorkspace } = useUserStore()
+    const { tasks, fetchTasks } = useTaskStore()
     const [isCreateOpen, setIsCreateOpen] = useState(false)
 
     useEffect(() => {
         if (currentWorkspace) {
             fetchProjects(currentWorkspace.id)
+            // Fetch all tasks (no project filter) to calculate time for each project
+            fetchTasks()
         }
-    }, [currentWorkspace, fetchProjects])
+    }, [currentWorkspace, fetchProjects, fetchTasks])
 
     if (!currentWorkspace) return null
 
@@ -98,18 +102,40 @@ export function ProjectList() {
                             </div>
 
                             <div className="space-y-4">
-                                <div>
-                                    <div className="flex items-center justify-between text-sm mb-2">
-                                        <span className="text-zinc-400">Budget</span>
-                                        <span className="text-white font-mono">{project.budget_hours_monthly}h/mo</span>
-                                    </div>
-                                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-primary-500 rounded-full"
-                                            style={{ width: '0%' }} // TODO: Calculate actual progress
-                                        />
-                                    </div>
-                                </div>
+                                {(() => {
+                                    // Calculate time from tasks for this project
+                                    const projectTasks = tasks.filter(t => t.project_id === project.id)
+                                    const monthlySeconds = projectTasks.reduce((sum, task) =>
+                                        sum + (task.total_duration || 0), 0)
+                                    const monthlyHours = monthlySeconds / 3600
+                                    const budgetHours = project.budget_hours_monthly || 0
+                                    const percentage = budgetHours > 0 ? (monthlyHours / budgetHours) * 100 : 0
+
+                                    return (
+                                        <div>
+                                            <div className="flex items-center justify-between text-sm mb-2">
+                                                <span className="text-zinc-400">This Month</span>
+                                                <span className="text-white font-mono">
+                                                    {monthlyHours.toFixed(1)}h / {budgetHours}h
+                                                </span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all ${percentage > 100 ? 'bg-red-500' :
+                                                        percentage > 80 ? 'bg-orange-500' :
+                                                            'bg-primary-500'
+                                                        }`}
+                                                    style={{ width: `${Math.min(percentage, 100)}%` }}
+                                                />
+                                            </div>
+                                            {percentage > 100 && (
+                                                <div className="text-xs text-red-400 mt-1">
+                                                    {(percentage - 100).toFixed(0)}% over
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
                             </div>
                         </Link>
                     ))}

@@ -22,9 +22,12 @@ export function formatDuration(seconds: number): string {
  * @returns Formatted string like "2:30:15"
  */
 export function formatDurationShort(seconds: number): string {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = seconds % 60
+    // Prevent negative values
+    const safeSeconds = Math.max(0, Math.floor(seconds))
+
+    const hours = Math.floor(safeSeconds / 3600)
+    const minutes = Math.floor((safeSeconds % 3600) / 60)
+    const secs = safeSeconds % 60
 
     if (hours > 0) {
         return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`

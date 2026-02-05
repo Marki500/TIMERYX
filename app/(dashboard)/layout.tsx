@@ -5,6 +5,7 @@ import { FloatingDock } from '@/components/layout/FloatingDock'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { useUserStore } from '@/stores/useUserStore'
+import { useProjectStore } from '@/stores/useProjectStore'
 import { TimerBar } from '@/components/timer/TimerBar'
 import { ActiveTimer } from '@/components/timer/ActiveTimer'
 import { ToastContainer } from '@/components/ui/ToastContainer'
@@ -19,6 +20,7 @@ export default function DashboardLayout({
     children: React.ReactNode
 }) {
     const { setProfile, setWorkspaces, setCurrentWorkspace, currentWorkspace, profile } = useUserStore()
+    const { fetchProjects } = useProjectStore()
     const supabase = createClient()
 
     useEffect(() => {
@@ -74,6 +76,13 @@ export default function DashboardLayout({
 
         loadData()
     }, []) // execute once on mount
+
+    // Load projects when workspace changes
+    useEffect(() => {
+        if (currentWorkspace?.id) {
+            fetchProjects(currentWorkspace.id)
+        }
+    }, [currentWorkspace?.id, fetchProjects])
 
 
     return (

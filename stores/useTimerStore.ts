@@ -100,6 +100,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             // Fallback: try to manually clear the active_timer_id
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
+                // @ts-ignore - Supabase types are incorrectly generated for profiles table
                 const { error: updateError } = await supabase
                     .from('profiles')
                     .update({ active_timer_id: null })
@@ -111,8 +112,9 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             }
         }
 
-        // Refresh tasks to show updated duration
-        await useTaskStore.getState().fetchTasks()
+        // Refresh tasks to show updated duration (preserve current project filter)
+        const currentProjectId = useTaskStore.getState().currentProjectId
+        await useTaskStore.getState().fetchTasks(currentProjectId || undefined)
 
         // Clear state and localStorage
         set({
@@ -182,7 +184,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             .eq('id', user.id)
             .single()
 
-        if (profile?.active_timer_id) {
+        if ((profile as any)?.active_timer_id) {
             // Fetch the actual time entry with task title
             const { data: entry } = await supabase
                 .from('time_entries')
@@ -194,7 +196,8 @@ export const useTimerStore = create<TimerState>((set, get) => ({
                 // Calculate initial duration
                 const start = new Date((entry as any).start_time).getTime()
                 const now = new Date().getTime()
-                const seconds = Math.floor((now - start) / 1000)
+                // Prevent negative values if start_time is invalid or in the future
+                const seconds = Math.max(0, Math.floor((now - start) / 1000))
 
                 // Extract title from joined relation (supabase returns it as an object or array)
                 const title = ((entry as any).task as any)?.title || null
@@ -234,23 +237,22 @@ export const useTimerStore = create<TimerState>((set, get) => ({
         const startTime = new Date(date + 'T12:00:00') // Default to noon
         const endTime = new Date(startTime.getTime() + durationSeconds * 1000)
 
-        const { error } = await supabase
-            .from('time_entries')
-            .insert({
-                user_id: user.id,
-                task_id: taskId,
-                start_time: startTime.toISOString(),
-                end_time: endTime.toISOString(),
-                is_manual: true
-            } as any)
+        // Use RPC function to add manual entry (bypasses RLS with proper permission checks)
+        const { data, error } = await (supabase.rpc as any)('add_manual_time_entry', {
+            p_task_id: taskId,
+            p_start_time: startTime.toISOString(),
+            p_end_time: endTime.toISOString(),
+            p_description: null
+        })
 
         if (error) {
             console.error('Error adding manual entry:', error)
             throw error
         }
 
-        // Refresh tasks to update total_duration
-        await useTaskStore.getState().fetchTasks()
+        // Refresh tasks to update total_duration (preserve current project filter)
+        const currentProjectId = useTaskStore.getState().currentProjectId
+        await useTaskStore.getState().fetchTasks(currentProjectId || undefined)
 
         // Trigger dashboard refresh
         useDashboardStore.getState().triggerRefresh()

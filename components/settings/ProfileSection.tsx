@@ -5,6 +5,7 @@ import { Camera, Save, Upload } from 'lucide-react'
 import { useUserStore } from '@/stores/useUserStore'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/stores/useToast'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 
 export function ProfileSection() {
     const { profile, setProfile } = useUserStore()
@@ -197,21 +198,12 @@ export function ProfileSection() {
             </div>
 
             {/* Timezone */}
-            <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                    Zona Horaria
-                </label>
-                <select
-                    value={timezone}
-                    onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all hover:bg-white/10 backdrop-blur-xl cursor-pointer"
-                    style={{ colorScheme: 'dark' }}
-                >
-                    {timezones.map(tz => (
-                        <option key={tz} value={tz} className="bg-zinc-900">{tz}</option>
-                    ))}
-                </select>
-            </div>
+            <CustomSelect
+                label="Zona Horaria"
+                value={timezone}
+                onChange={setTimezone}
+                options={timezones.map(tz => ({ value: tz, label: tz }))}
+            />
 
             {/* Save Button */}
             <div className="flex justify-end pt-4">

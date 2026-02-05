@@ -7,6 +7,7 @@ import { X, Clock, Calendar as CalendarIcon } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useTimerStore } from '@/stores/useTimerStore'
 import { useProjectStore } from '@/stores/useProjectStore'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 
 interface ManualTimeDialogProps {
     isOpen: boolean
@@ -113,31 +114,33 @@ export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId }: ManualT
                             <form onSubmit={handleSubmit} className="relative p-6 space-y-5">
                                 {/* Task Display/Selector */}
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-zinc-400">Task</label>
                                     {preSelectedTaskId && selectedTask ? (
-                                        <div className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white">
-                                            <div className="font-medium">{selectedTask.title}</div>
-                                            {selectedProject && (
-                                                <div className="text-xs text-zinc-500 mt-1">{selectedProject.name}</div>
-                                            )}
-                                        </div>
+                                        <>
+                                            <label className="text-sm font-medium text-zinc-400">Task</label>
+                                            <div className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white">
+                                                <div className="font-medium">{selectedTask.title}</div>
+                                                {selectedProject && (
+                                                    <div className="text-xs text-zinc-500 mt-1">{selectedProject.name}</div>
+                                                )}
+                                            </div>
+                                        </>
                                     ) : (
-                                        <select
+                                        <CustomSelect
+                                            label="Task"
                                             value={selectedTaskId}
-                                            onChange={(e) => setSelectedTaskId(e.target.value)}
-                                            required
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-500/50 focus:bg-white/10 transition-all"
-                                        >
-                                            <option value="" disabled>Select a task...</option>
-                                            {tasks.map((task) => {
-                                                const project = projects.find(p => p.id === task.project_id)
-                                                return (
-                                                    <option key={task.id} value={task.id} className="bg-[#1a1a1a]">
-                                                        {task.title} {project && `(${project.name})`}
-                                                    </option>
-                                                )
-                                            })}
-                                        </select>
+                                            onChange={setSelectedTaskId}
+                                            options={[
+                                                { value: '', label: 'Select a task...' },
+                                                ...tasks.map((task) => {
+                                                    const project = projects.find(p => p.id === task.project_id)
+                                                    return {
+                                                        value: task.id,
+                                                        label: `${task.title}${project ? ` (${project.name})` : ''}`
+                                                    }
+                                                })
+                                            ]}
+                                            placeholder="Select a task..."
+                                        />
                                     )}
                                 </div>
 
@@ -150,9 +153,10 @@ export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId }: ManualT
                                             value={date}
                                             onChange={(e) => setDate(e.target.value)}
                                             required
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-500/50 focus:bg-white/10 transition-all"
+                                            className="w-full px-4 py-2.5 bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all hover:border-white/20 hover:from-white/[0.12] hover:to-white/[0.04] backdrop-blur-sm cursor-pointer"
+                                            style={{ colorScheme: 'dark' }}
                                         />
-                                        <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 pointer-events-none" />
+                                        <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 pointer-events-none" />
                                     </div>
                                 </div>
 

@@ -269,8 +269,8 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate, initialProjectI
                                     </div>
 
                                     <div className="relative">
-                                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium transition-colors border border-transparent hover:border-white/10">
-                                            <CalendarIcon size={14} className="text-zinc-500" />
+                                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 hover:border-white/20 hover:from-white/[0.12] hover:to-white/[0.04] text-sm font-medium transition-all backdrop-blur-sm">
+                                            <CalendarIcon size={14} className="text-zinc-400" />
                                             <input
                                                 type="date"
                                                 value={dueDate}

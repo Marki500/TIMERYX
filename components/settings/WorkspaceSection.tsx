@@ -238,7 +238,7 @@ export function WorkspaceSection() {
                             type="time"
                             value={workingHoursStart}
                             onChange={(e) => setWorkingHoursStart(e.target.value)}
-                            className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all hover:bg-white/5"
+                            className="w-full px-4 py-2.5 bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all hover:border-white/20 hover:from-white/[0.12] hover:to-white/[0.04] backdrop-blur-sm cursor-pointer"
                             style={{ colorScheme: 'dark' }}
                         />
                     </div>
@@ -250,7 +250,7 @@ export function WorkspaceSection() {
                             type="time"
                             value={workingHoursEnd}
                             onChange={(e) => setWorkingHoursEnd(e.target.value)}
-                            className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all hover:bg-white/5"
+                            className="w-full px-4 py-2.5 bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all hover:border-white/20 hover:from-white/[0.12] hover:to-white/[0.04] backdrop-blur-sm cursor-pointer"
                             style={{ colorScheme: 'dark' }}
                         />
                     </div>

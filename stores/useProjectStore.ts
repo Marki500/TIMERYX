@@ -31,6 +31,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
         if (error) {
             console.error('Error fetching projects:', error)
+            set({ projects: [] })
         } else {
             set({ projects: data || [] })
         }
