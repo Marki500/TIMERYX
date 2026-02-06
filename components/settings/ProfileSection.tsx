@@ -164,7 +164,7 @@ export function ProfileSection() {
                     />
                 </div>
                 <div>
-                    <p className="text-white font-medium">{displayName || profile?.email}</p>
+                    <p className="text-white font-medium break-all">{displayName || profile?.email}</p>
                     <p className="text-zinc-500 text-sm">Haz click en el icono para cambiar tu avatar</p>
                 </div>
             </div>

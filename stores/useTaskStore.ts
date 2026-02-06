@@ -77,6 +77,18 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             set((state) => ({ tasks: [data, ...state.tasks] }))
         }
 
+        // Check for assignment trigger
+        if (data.assigned_to && data.assigned_to !== user.id) {
+            const { sendNotification } = await import('@/lib/notifications')
+            sendNotification({
+                userId: data.assigned_to,
+                type: 'task_assigned',
+                title: 'New Task Assigned',
+                message: `You have been assigned to a new task: ${data.title}`,
+                link: `/projects/${data.project_id}`
+            })
+        }
+
         return data
     },
 
@@ -101,6 +113,25 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
         if (error) {
             console.error('Error updating task:', error)
+        } else {
+            // Check for assignment trigger (running after update to ensure success)
+            // We need previous state to know if it changed, which we grabbed optimistically or via find
+            // For simplicity, we can just check if 'updates.assigned_to' exists.
+            // Ideally we check if it's DIFFERENT from old value.
+            const oldTask = get().tasks.find(t => t.id === id)
+            if (updates.assigned_to && oldTask && updates.assigned_to !== oldTask.assigned_to) {
+                const { data: { user } } = await supabase.auth.getUser()
+                if (user && updates.assigned_to !== user.id) {
+                    const { sendNotification } = await import('@/lib/notifications')
+                    sendNotification({
+                        userId: updates.assigned_to,
+                        type: 'task_assigned',
+                        title: 'Task Assigned',
+                        message: `You have been assigned to task: ${oldTask.title}`, // Note: title might have changed too?
+                        link: `/projects/${oldTask.project_id}`
+                    })
+                }
+            }
         }
     },
 

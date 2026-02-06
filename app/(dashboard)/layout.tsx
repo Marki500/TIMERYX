@@ -14,6 +14,8 @@ import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher'
 
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
+import { NotificationCenter } from '@/components/notifications/NotificationCenter'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 export default function DashboardLayout({
     children,
@@ -142,7 +144,7 @@ export default function DashboardLayout({
 
     return (
         <DndProvider backend={HTML5Backend}>
-            <div className="flex h-screen w-full bg-[#050505] text-foreground overflow-hidden font-sans selection:bg-primary-500/30 relative">
+            <div className="flex h-screen w-full bg-background text-foreground overflow-hidden font-sans selection:bg-primary-500/30 relative">
                 {/* Background Ambience - Auroras */}
                 <div className="fixed inset-0 pointer-events-none z-0">
                     <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-gradient-to-br from-indigo-500/80 via-blue-500/60 to-transparent rounded-full blur-[100px] animate-slow-glow" />
@@ -155,7 +157,7 @@ export default function DashboardLayout({
                     {/* Centered Content Area */}
                     <main className="flex-1 max-w-7xl relative flex flex-col h-screen overflow-hidden">
                         {/* Dynamic Island Area / Top Bar */}
-                        <div className="h-24 px-6 md:px-8 flex items-center justify-between z-10 shrink-0">
+                        <div className="h-24 px-6 md:px-8 flex items-center justify-between z-50 shrink-0">
                             <div className="flex items-center gap-4">
                                 <WorkspaceSwitcher />
                             </div>
@@ -165,6 +167,8 @@ export default function DashboardLayout({
 
                             {/* User Profile / Notifications */}
                             <div className="flex items-center gap-4">
+                                <ThemeToggle />
+                                <NotificationCenter />
                                 {profile?.avatar_url ? (
                                     <img
                                         src={profile.avatar_url}

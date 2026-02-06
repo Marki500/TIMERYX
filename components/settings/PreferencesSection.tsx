@@ -98,7 +98,7 @@ export function PreferencesSection() {
                 </div>
                 <button
                     onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${notificationsEnabled ? 'bg-primary-500' : 'bg-zinc-700'
+                    className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${notificationsEnabled ? 'bg-primary-500' : 'bg-zinc-700'
                         }`}
                 >
                     <div

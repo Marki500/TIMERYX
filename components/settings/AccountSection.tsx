@@ -90,7 +90,7 @@ export function AccountSection() {
 
             {/* Password Reset */}
             <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20">
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col md:flex-row items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
                         <Key className="w-5 h-5 text-blue-400 mt-0.5" />
                         <div>
@@ -111,7 +111,7 @@ export function AccountSection() {
 
             {/* Export Data */}
             <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col md:flex-row items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
                         <Download className="w-5 h-5 text-emerald-400 mt-0.5" />
                         <div>

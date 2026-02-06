@@ -115,7 +115,8 @@ export function TaskTable() {
             </div>
 
             <div className="w-full overflow-hidden rounded-3xl border border-white/5 bg-black/20 backdrop-blur-md">
-                <div className="overflow-x-auto">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead className="bg-white/5 text-zinc-400 text-xs font-medium uppercase tracking-wider">
                             <tr>
@@ -252,6 +253,69 @@ export function TaskTable() {
                             })}
                         </motion.tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4 p-4">
+                    {filteredAndSortedTasks.map((task) => {
+                        const project = projects.find(p => p.id === task.project_id)
+                        return (
+                            <div key={task.id} className="bg-white/5 rounded-2xl p-4 border border-white/5 space-y-4">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <button className="text-zinc-600 hover:text-primary-500 transition-colors">
+                                            <Circle size={20} />
+                                        </button>
+                                        <div>
+                                            <h4 className={cn("font-medium text-white", task.status === 'done' && "line-through text-zinc-500")}>
+                                                {task.title}
+                                            </h4>
+                                            {project && (
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: project.color }} />
+                                                    <span className="text-xs text-zinc-400">{project.name}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <span className={cn(
+                                        "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
+                                        task.status === 'done' ? "bg-green-500/10 text-green-400 border-green-500/20" :
+                                            task.status === 'in_progress' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                                "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
+                                    )}>
+                                        {task.status.replace('_', ' ')}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between text-sm text-zinc-400 pt-2 border-t border-white/5">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            {task.priority === 'high' && <AlertCircle size={14} className="text-red-400" />}
+                                            <span className={cn(
+                                                task.priority === 'high' ? "text-red-400" :
+                                                    task.priority === 'medium' ? "text-orange-400" :
+                                                        "text-green-400"
+                                            )}>
+                                                {task.priority}
+                                            </span>
+                                        </div>
+                                        <div className="font-mono">
+                                            {formatDuration(task.total_duration || 0)}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => startTimer(task.id, task.title)} className="p-2 hover:bg-white/10 rounded-lg text-primary-400">
+                                            <Play size={16} />
+                                        </button>
+                                        <button onClick={() => setEditingTask(task)} className="p-2 hover:bg-white/10 rounded-lg text-blue-400">
+                                            <Edit2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })}
                 </div>
             </div>
 

@@ -76,28 +76,28 @@ export default function ProjectDetailsPage() {
                     Back to Projects
                 </button>
 
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <div
-                            className="w-4 h-12 rounded-full"
+                            className="w-4 h-12 rounded-full shrink-0"
                             style={{ backgroundColor: project.color }}
                         />
                         <div>
-                            <h1 className="text-3xl font-bold text-white mb-1">{project.name}</h1>
-                            <p className="text-zinc-400">Manage tasks and track time for this project</p>
+                            <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">{project.name}</h1>
+                            <p className="text-sm md:text-base text-zinc-400">Manage tasks and track time for this project</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
                         <button
                             onClick={() => setIsInviteClientOpen(true)}
-                            className="px-5 py-3 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold rounded-full hover:bg-blue-500/20 transition-colors flex items-center gap-2"
+                            className="px-5 py-3 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold rounded-xl hover:bg-blue-500/20 transition-colors flex items-center justify-center gap-2"
                         >
                             <UserPlus size={18} />
                             Invite Client
                         </button>
                         <button
                             onClick={() => setIsCreateOpen(true)}
-                            className="px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-zinc-200 transition-colors shadow-lg shadow-white/10"
+                            className="px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors shadow-lg shadow-white/10 flex items-center justify-center"
                         >
                             + Add Task
                         </button>
@@ -106,7 +106,7 @@ export default function ProjectDetailsPage() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/5 backdrop-blur-sm">
                     <div className="flex items-center gap-3 mb-2 text-zinc-400">
                         <Clock size={16} />
@@ -209,9 +209,11 @@ export default function ProjectDetailsPage() {
 
             {/* Tasks Section with View Switcher */}
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <h2 className="text-xl font-bold text-white">Project Tasks</h2>
-                    <ViewSwitcher />
+                    <div className="w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+                        <ViewSwitcher />
+                    </div>
                 </div>
 
                 <div className="min-h-[500px]">

@@ -138,11 +138,11 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
     return (
         <div className="space-y-4">
             {/* Export Buttons */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <p className="text-sm text-zinc-400">
                     {entries.length} {entries.length === 1 ? 'entrada' : 'entradas'} encontradas
                 </p>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                     <button
                         onClick={handleExportCSV}
                         className="px-4 py-2 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 hover:from-emerald-500/20 hover:to-teal-500/20 hover:border-emerald-500/30 transition-all flex items-center gap-2 group"

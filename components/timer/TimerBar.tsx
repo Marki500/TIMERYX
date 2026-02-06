@@ -27,7 +27,7 @@ export function TimerBar() {
                 <motion.button
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white/10 backdrop-blur-3xl px-6 py-2.5 rounded-full border border-white/20 shadow-lg shadow-black/20 flex items-center gap-3 hover:bg-white/15 transition-all group ring-1 ring-white/10"
+                    className="hidden md:flex bg-white/10 backdrop-blur-3xl px-6 py-2.5 rounded-full border border-white/20 shadow-lg shadow-black/20 items-center gap-3 hover:bg-white/15 transition-all group ring-1 ring-white/10"
                 >
                     <div className="w-2 h-2 rounded-full bg-zinc-400 group-hover:bg-primary-400 transition-colors shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
                     <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">Start a timer from a task</span>
@@ -40,7 +40,7 @@ export function TimerBar() {
         <div className="absolute left-1/2 -translate-x-1/2 top-6 z-50">
             <motion.div
                 layoutId="timer-pill"
-                className="bg-white/10 backdrop-blur-3xl px-6 py-2.5 rounded-full border border-white/20 shadow-2xl shadow-black/40 flex items-center gap-4 cursor-pointer hover:bg-white/15 transition-all ring-1 ring-white/10"
+                className="hidden md:flex bg-white/10 backdrop-blur-3xl px-6 py-2.5 rounded-full border border-white/20 shadow-2xl shadow-black/40 items-center gap-4 cursor-pointer hover:bg-white/15 transition-all ring-1 ring-white/10"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
             >

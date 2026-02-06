@@ -259,7 +259,7 @@ export function WorkspaceSection() {
 
             {/* Workspace Members */}
             <div className="pt-4 border-t border-white/10">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                     <div className="flex items-center gap-2">
                         <Users className="w-5 h-5 text-primary-400" />
                         <h4 className="text-md font-bold text-white">Miembros del Workspace</h4>

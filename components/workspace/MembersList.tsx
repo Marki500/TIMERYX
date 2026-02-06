@@ -151,10 +151,10 @@ export function MembersList() {
                 {members.map((member) => (
                     <div
                         key={member.user_id}
-                        className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors gap-3 sm:gap-0"
                     >
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center text-white font-medium border border-white/10">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center text-white font-medium border border-white/10">
                                 {member.profiles.avatar_url ? (
                                     <img
                                         src={member.profiles.avatar_url}
@@ -168,22 +168,22 @@ export function MembersList() {
                                 )}
                             </div>
 
-                            <div>
-                                <p className="text-sm font-medium text-white flex items-center gap-2">
-                                    {member.profiles.full_name || 'Usuario'}
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-white flex items-center gap-2 flex-wrap">
+                                    <span className="truncate">{member.profiles.full_name || 'Usuario'}</span>
                                     {member.role === 'owner' && (
                                         <span className="text-[10px] bg-amber-500/20 text-amber-500 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-semibold">
                                             OWNER
                                         </span>
                                     )}
                                 </p>
-                                <p className="text-xs text-zinc-500">
+                                <p className="text-xs text-zinc-500 truncate">
                                     {member.profiles.email}
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-end gap-3 pl-14 sm:pl-0">
                             {member.role !== 'owner' && (
                                 <div className={`px-2 py-1 rounded-lg text-xs font-medium ${member.role === 'client'
                                     ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
