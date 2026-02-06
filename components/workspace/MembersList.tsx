@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 
 interface Member {
     user_id: string
-    role: 'owner' | 'admin' | 'member' | 'viewer'
+    role: 'owner' | 'admin' | 'member' | 'client'
     joined_at: string
     profiles: {
         email: string
@@ -21,7 +21,7 @@ interface Member {
 interface Invitation {
     id: string
     email: string
-    role: 'owner' | 'admin' | 'member' | 'viewer'
+    role: 'owner' | 'admin' | 'member' | 'client'
     created_at: string
 }
 
@@ -184,8 +184,13 @@ export function MembersList() {
 
                         <div className="flex items-center gap-3">
                             {member.role !== 'owner' && (
-                                <div className="bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 px-2 py-1 rounded-lg text-xs font-medium">
-                                    {member.role.toUpperCase()}
+                                <div className={`px-2 py-1 rounded-lg text-xs font-medium ${member.role === 'client'
+                                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                        : member.role === 'admin'
+                                            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                                            : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
+                                    }`}>
+                                    {member.role === 'client' ? 'CLIENTE' : member.role.toUpperCase()}
                                 </div>
                             )}
 

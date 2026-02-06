@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     LayoutGrid,
@@ -10,14 +10,24 @@ import {
     Clock,
     PieChart,
     Plus,
-    Settings
+    Settings,
+    LogOut
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export function FloatingDock() {
     const pathname = usePathname()
+    const router = useRouter()
+    const supabase = createClient()
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+    const [hoveredLogout, setHoveredLogout] = useState(false)
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut()
+        router.push('/login')
+    }
 
     const links = [
         { href: '/dashboard', icon: LayoutGrid, label: 'Home' },
@@ -89,6 +99,42 @@ export function FloatingDock() {
                         </Link>
                     )
                 })}
+
+                {/* Divider */}
+                <div className="w-px h-8 lg:h-10 bg-white/10 mx-1 lg:mx-2 self-center" />
+
+                {/* Logout Button */}
+                <button
+                    onClick={handleLogout}
+                    onMouseEnter={() => setHoveredLogout(true)}
+                    onMouseLeave={() => setHoveredLogout(false)}
+                    className="relative flex items-center justify-center rounded-xl lg:rounded-2xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all w-12 h-12 lg:w-14 lg:h-14"
+                >
+                    <motion.div
+                        whileHover={{
+                            scale: 1.15,
+                            y: -4,
+                            transition: { type: 'spring', stiffness: 400, damping: 25 }
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                    >
+                        <LogOut size={24} className="w-5 h-5 lg:w-6 lg:h-6" />
+                    </motion.div>
+
+                    <AnimatePresence>
+                        {hoveredLogout && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, x: "-50%" }}
+                                animate={{ opacity: 1, y: -12, x: "-50%" }}
+                                exit={{ opacity: 0, y: 5, x: "-50%" }}
+                                className="hidden lg:block absolute -top-2 left-1/2 px-3 py-1.5 rounded-lg bg-zinc-900/90 border border-white/10 text-xs font-medium text-white whitespace-nowrap z-50 pointer-events-none backdrop-blur-md"
+                            >
+                                Logout
+                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-zinc-900/90 rotate-45 border-r border-b border-white/10" />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </button>
 
                 {/* Divider */}
                 <div className="w-px h-8 lg:h-10 bg-white/10 mx-1 lg:mx-2 self-center" />

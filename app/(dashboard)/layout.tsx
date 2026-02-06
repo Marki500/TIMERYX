@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { FloatingDock } from '@/components/layout/FloatingDock'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
@@ -19,14 +20,43 @@ export default function DashboardLayout({
 }: {
     children: React.ReactNode
 }) {
-    const { setProfile, setWorkspaces, setCurrentWorkspace, currentWorkspace, profile } = useUserStore()
+    const { setProfile, setWorkspaces, setCurrentWorkspace, setCurrentRole, currentWorkspace, currentRole, profile } = useUserStore()
     const { fetchProjects } = useProjectStore()
+    const router = useRouter()
     const supabase = createClient()
 
     useEffect(() => {
         async function loadData() {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
+
+            // Check if user is a client (has project_clients but no workspace_members)
+            const { data: clientData } = await supabase
+                .from('project_clients')
+                .select('id')
+                .eq('user_id', user.id)
+                .limit(1)
+
+            const { data: memberData } = await supabase
+                .from('workspace_members')
+                .select('id')
+                .eq('user_id', user.id)
+                .limit(1)
+
+            const hasClientAccess = clientData && clientData.length > 0
+            const hasMemberAccess = memberData && memberData.length > 0
+
+            if (hasClientAccess && !hasMemberAccess) {
+                // User is a client only, redirect to client portal
+                router.push('/client')
+                return
+            }
+
+            if (!hasMemberAccess) {
+                // User has no access, redirect to login
+                router.push('/login')
+                return
+            }
 
             // Load Profile
             const { data: profile } = await supabase
@@ -42,6 +72,7 @@ export default function DashboardLayout({
                 .from('workspace_members')
                 .select(`
            workspace_id,
+           role,
            workspaces:workspace_id ( * )
         `)
                 .eq('user_id', user.id)
@@ -52,6 +83,11 @@ export default function DashboardLayout({
 
                 if (joinedWorkspaces.length > 0 && !currentWorkspace) {
                     setCurrentWorkspace(joinedWorkspaces[0])
+                    // Set role for first workspace
+                    const firstMembership: any = members.find((m: any) => m.workspaces?.id === joinedWorkspaces[0].id)
+                    if (firstMembership?.role) {
+                        setCurrentRole(firstMembership.role)
+                    }
                 }
             } else {
                 // No workspaces found. Auto-create one for onboarding.
@@ -77,13 +113,32 @@ export default function DashboardLayout({
         loadData()
     }, []) // execute once on mount
 
-    // Load projects when workspace changes
+    // Load projects when workspace changes and update role
     useEffect(() => {
-        if (currentWorkspace?.id) {
+        async function updateWorkspaceData() {
+            if (!currentWorkspace?.id) return
+
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return
+
+            // Fetch user's role in current workspace
+            const { data: membership } = await supabase
+                .from('workspace_members')
+                .select('role')
+                .eq('workspace_id', currentWorkspace.id)
+                .eq('user_id', user.id)
+                .single()
+
+            if (membership?.role) {
+                setCurrentRole(membership.role as any)
+            }
+
+            // Fetch projects
             fetchProjects(currentWorkspace.id)
         }
-    }, [currentWorkspace?.id, fetchProjects])
 
+        updateWorkspaceData()
+    }, [currentWorkspace?.id, fetchProjects, setCurrentRole])
 
     return (
         <DndProvider backend={HTML5Backend}>

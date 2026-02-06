@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher'
 import {
@@ -21,6 +21,7 @@ import {
     Calendar
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 
 interface SidebarProps {
     collapsed: boolean
@@ -29,6 +30,13 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
     const pathname = usePathname()
+    const router = useRouter()
+    const supabase = createClient()
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut()
+        router.push('/login')
+    }
 
     const links = [
         { icon: LayoutGrid, label: 'Dashboard', href: '/dashboard' },
@@ -110,7 +118,17 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             </nav>
 
             {/* User / Bottom Actions */}
-            <div className="p-3 border-t border-white/5">
+            <div className="p-3 border-t border-white/5 space-y-2">
+                <button
+                    onClick={handleLogout}
+                    className="w-full h-12 flex items-center px-4 rounded-2xl hover:bg-red-500/10 text-zinc-400 hover:text-red-400 transition-colors"
+                >
+                    <LogOut size={20} />
+                    {!collapsed && (
+                        <span className="ml-3 text-sm font-medium">Logout</span>
+                    )}
+                </button>
+
                 <button
                     onClick={() => setCollapsed(!collapsed)}
                     className="w-full h-12 flex items-center justify-center rounded-2xl hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"

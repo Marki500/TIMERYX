@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Clock, Calendar, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Clock, Calendar, AlertCircle, UserPlus } from 'lucide-react'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { TaskTable } from '@/components/tasks/TaskTable'
@@ -11,6 +11,8 @@ import { TaskKanban } from '@/components/tasks/TaskKanban'
 import { TaskCalendar } from '@/components/tasks/TaskCalendar'
 import { ViewSwitcher } from '@/components/tasks/ViewSwitcher'
 import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog'
+import { InviteClientModal } from '@/components/projects/InviteClientModal'
+import { ProjectChat } from '@/components/chat/ProjectChat'
 import { formatDuration } from '@/lib/utils'
 
 export default function ProjectDetailsPage() {
@@ -21,6 +23,7 @@ export default function ProjectDetailsPage() {
     const { projects } = useProjectStore()
     const { tasks, fetchTasks, viewMode } = useTaskStore()
     const [isCreateOpen, setIsCreateOpen] = useState(false)
+    const [isInviteClientOpen, setIsInviteClientOpen] = useState(false)
     const [selectedDate, setSelectedDate] = useState<Date | null>(null) // State for calendar date select
 
     const handleDateClick = (date: Date) => {
@@ -84,12 +87,21 @@ export default function ProjectDetailsPage() {
                             <p className="text-zinc-400">Manage tasks and track time for this project</p>
                         </div>
                     </div>
-                    <button
-                        onClick={() => setIsCreateOpen(true)}
-                        className="px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-zinc-200 transition-colors shadow-lg shadow-white/10"
-                    >
-                        + Add Task
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setIsInviteClientOpen(true)}
+                            className="px-5 py-3 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold rounded-full hover:bg-blue-500/20 transition-colors flex items-center gap-2"
+                        >
+                            <UserPlus size={18} />
+                            Invite Client
+                        </button>
+                        <button
+                            onClick={() => setIsCreateOpen(true)}
+                            className="px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-zinc-200 transition-colors shadow-lg shadow-white/10"
+                        >
+                            + Add Task
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -146,8 +158,8 @@ export default function ProjectDetailsPage() {
                                             <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                                                 <div
                                                     className={`h-full transition-all rounded-full ${percentage > 100 ? 'bg-red-500' :
-                                                            percentage > 80 ? 'bg-orange-500' :
-                                                                'bg-primary-500'
+                                                        percentage > 80 ? 'bg-orange-500' :
+                                                            'bg-primary-500'
                                                         }`}
                                                     style={{ width: `${Math.min(percentage, 100)}%` }}
                                                 />
@@ -189,6 +201,12 @@ export default function ProjectDetailsPage() {
                 </div>
             </div>
 
+            {/* Project Chat */}
+            <div className="space-y-4">
+                <h2 className="text-xl font-bold text-white">Project Chat</h2>
+                <ProjectChat projectId={projectId} userType="member" />
+            </div>
+
             {/* Tasks Section with View Switcher */}
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -213,6 +231,13 @@ export default function ProjectDetailsPage() {
                     setIsCreateOpen(false)
                     setSelectedDate(null)
                 }}
+            />
+
+            <InviteClientModal
+                isOpen={isInviteClientOpen}
+                onClose={() => setIsInviteClientOpen(false)}
+                projectId={projectId}
+                projectName={project.name}
             />
         </div>
     )

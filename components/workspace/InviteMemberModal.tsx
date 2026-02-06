@@ -100,25 +100,31 @@ export function InviteMemberModal({ isOpen, onClose, onInviteSuccess }: InviteMe
                             <label className="text-xs font-medium text-zinc-400 uppercase mb-2 block tracking-wider">
                                 Rol
                             </label>
-                            <div className="grid grid-cols-2 gap-3">
-                                {['member', 'admin'].map((r) => (
+                            <div className="grid grid-cols-3 gap-3">
+                                {[
+                                    { value: 'member', label: 'Miembro' },
+                                    { value: 'admin', label: 'Admin' },
+                                    { value: 'client', label: 'Cliente' }
+                                ].map((r) => (
                                     <button
-                                        key={r}
-                                        onClick={() => setRole(r)}
-                                        className={`flex items-center justify-center gap-2 py-3 rounded-xl border transition-all ${role === r
+                                        key={r.value}
+                                        onClick={() => setRole(r.value)}
+                                        className={`flex items-center justify-center gap-2 py-3 rounded-xl border transition-all ${role === r.value
                                             ? 'bg-primary-500/10 border-primary-500 text-primary-400'
                                             : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'
                                             }`}
                                     >
                                         <Shield className="w-4 h-4" />
-                                        <span className="capitalize">{r === 'member' ? 'Miembro' : 'Admin'}</span>
+                                        <span className="capitalize text-sm">{r.label}</span>
                                     </button>
                                 ))}
                             </div>
                             <p className="text-xs text-zinc-500 mt-2">
                                 {role === 'admin'
                                     ? 'Puede gestionar miembros, proyectos y tareas.'
-                                    : 'Puede crear y gestionar sus propias tareas y ver proyectos.'}
+                                    : role === 'client'
+                                        ? 'Solo puede ver proyectos marcados como visibles. Sin acceso a herramientas internas.'
+                                        : 'Puede crear y gestionar sus propias tareas y ver proyectos.'}
                             </p>
                         </div>
 
