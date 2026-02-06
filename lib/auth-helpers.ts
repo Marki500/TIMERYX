@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 export async function isClientUser(userId: string): Promise<boolean> {
     const supabase = await createClient()
 
-    const { data } = await supabase.rpc('is_client_user', {
+    const { data } = await (supabase.rpc as any)('is_client_user', {
         p_user_id: userId
     })
 
@@ -34,7 +34,7 @@ export async function isMemberUser(userId: string): Promise<boolean> {
 export async function getClientProjects(userId: string) {
     const supabase = await createClient()
 
-    const { data, error } = await supabase.rpc('get_client_projects', {
+    const { data, error } = await (supabase.rpc as any)('get_client_projects', {
         p_user_id: userId
     })
 
@@ -52,7 +52,7 @@ export async function getClientProjects(userId: string) {
 export async function getProjectByToken(token: string) {
     const supabase = await createClient()
 
-    const { data, error } = await supabase.rpc('get_project_by_token', {
+    const { data, error } = await (supabase.rpc as any)('get_project_by_token', {
         p_token: token
     })
 
@@ -70,20 +70,20 @@ export async function canAccessProject(userId: string, projectId: string): Promi
     const supabase = await createClient()
 
     // Check if user is a workspace member with access
-    const { data: memberData } = await supabase
+    const { data: memberData } = await (supabase
         .from('workspace_members')
         .select('workspace_id')
-        .eq('user_id', userId)
+        .eq('user_id', userId) as any)
 
     if (memberData && memberData.length > 0) {
-        const workspaceIds = memberData.map(m => m.workspace_id)
+        const workspaceIds = memberData.map((m: any) => m.workspace_id)
 
-        const { data: projectData } = await supabase
+        const { data: projectData } = await (supabase
             .from('projects')
             .select('id')
             .eq('id', projectId)
             .in('workspace_id', workspaceIds)
-            .limit(1)
+            .limit(1) as any)
 
         if (projectData && projectData.length > 0) {
             return true
@@ -91,12 +91,12 @@ export async function canAccessProject(userId: string, projectId: string): Promi
     }
 
     // Check if user is a client with access to this project
-    const { data: clientData } = await supabase
+    const { data: clientData } = await (supabase
         .from('project_clients')
         .select('id')
         .eq('user_id', userId)
         .eq('project_id', projectId)
-        .limit(1)
+        .limit(1) as any)
 
     return clientData !== null && clientData.length > 0
 }
@@ -107,7 +107,7 @@ export async function canAccessProject(userId: string, projectId: string): Promi
 export async function linkClientAccount(token: string, userId: string): Promise<boolean> {
     const supabase = await createClient()
 
-    const { data, error } = await supabase.rpc('link_client_account', {
+    const { data, error } = await (supabase.rpc as any)('link_client_account', {
         p_token: token,
         p_user_id: userId
     })

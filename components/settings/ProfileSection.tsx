@@ -66,9 +66,9 @@ export function ProfileSection() {
             .getPublicUrl(fileName)
 
         // Update profile
-        const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ avatar_url: publicUrl } as any)
+        const { error: updateError } = await (supabase
+            .from('profiles') as any)
+            .update({ avatar_url: publicUrl })
             .eq('id', profile.id)
 
         if (!updateError) {
@@ -90,12 +90,12 @@ export function ProfileSection() {
         setIsSaving(true)
         const supabase = createClient()
 
-        const { error } = await supabase
-            .from('profiles')
+        const { error } = await (supabase
+            .from('profiles') as any)
             .update({
                 display_name: displayName,
                 bio: bio
-            } as any)
+            })
             .eq('id', profile.id)
 
         setIsSaving(false)

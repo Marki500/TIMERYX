@@ -86,6 +86,8 @@ export function TaskTable() {
                 <CreateTaskDialog
                     isOpen={isCreateDialogOpen}
                     onClose={() => setIsCreateDialogOpen(false)}
+                    initialDate={null}
+                    initialProjectId={undefined}
                 />
             </>
         )
@@ -261,7 +263,7 @@ export function TaskTable() {
 
             <ConfirmDialog
                 isOpen={!!deletingTaskId}
-                onClose={() => setDeletingTaskId(null)}
+                onCancel={() => setDeletingTaskId(null)}
                 onConfirm={async () => {
                     if (deletingTaskId) {
                         await useTaskStore.getState().deleteTask(deletingTaskId)

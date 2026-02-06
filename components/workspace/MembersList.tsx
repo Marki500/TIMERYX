@@ -97,13 +97,14 @@ export function MembersList() {
     }
 
     const handleRemoveMember = async (userId: string) => {
+        if (!currentWorkspace?.id) return
         if (!confirm('¿Estás seguro de que quieres eliminar a este miembro?')) return
 
         try {
             const { error } = await supabase
                 .from('workspace_members')
                 .delete()
-                .eq('workspace_id', currentWorkspace?.id)
+                .eq('workspace_id', currentWorkspace!.id)
                 .eq('user_id', userId)
 
             if (error) throw error
@@ -121,8 +122,8 @@ export function MembersList() {
 
     const handleRoleChange = async (userId: string, newRole: string) => {
         try {
-            const { error } = await supabase
-                .from('workspace_members')
+            const { error } = await (supabase
+                .from('workspace_members') as any)
                 .update({ role: newRole })
                 .eq('workspace_id', currentWorkspace?.id)
                 .eq('user_id', userId)
@@ -185,10 +186,10 @@ export function MembersList() {
                         <div className="flex items-center gap-3">
                             {member.role !== 'owner' && (
                                 <div className={`px-2 py-1 rounded-lg text-xs font-medium ${member.role === 'client'
-                                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                                        : member.role === 'admin'
-                                            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                                            : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
+                                    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                    : member.role === 'admin'
+                                        ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                                        : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
                                     }`}>
                                     {member.role === 'client' ? 'CLIENTE' : member.role.toUpperCase()}
                                 </div>

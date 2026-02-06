@@ -41,16 +41,18 @@ export default function ClientDashboard() {
                     .from('profiles')
                     .select('full_name')
                     .eq('id', user.id)
-                    .single()
+                    .single() as any
 
                 if (profile?.full_name) {
                     setUserName(profile.full_name)
                 }
 
                 // Get client's projects using RPC
-                const { data: clientProjects, error: projectsError } = await supabase.rpc('get_client_projects', {
+                const { data: clientProjectsData, error: projectsError } = await (supabase.rpc as any)('get_client_projects', {
                     p_user_id: user.id
                 })
+
+                const clientProjects = clientProjectsData as any[]
 
                 if (!projectsError && clientProjects && clientProjects.length > 0) {
                     // Fetch tasks for each project to get duration and count

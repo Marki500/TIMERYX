@@ -30,7 +30,7 @@ export default function ClientProjectView() {
         async function loadProject() {
             try {
                 // Get project by token using RPC function
-                const { data: projectData, error: projectError } = await supabase.rpc('get_project_by_token', {
+                const { data: projectData, error: projectError } = await (supabase.rpc as any)('get_project_by_token', {
                     p_token: token
                 })
 

@@ -101,8 +101,8 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
                 // @ts-ignore - Supabase types are incorrectly generated for profiles table
-                const { error: updateError } = await supabase
-                    .from('profiles')
+                const { error: updateError } = await (supabase
+                    .from('profiles') as any)
                     .update({ active_timer_id: null })
                     .eq('id', user.id)
 

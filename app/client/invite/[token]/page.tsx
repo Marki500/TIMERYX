@@ -34,7 +34,7 @@ export default function ClientInvitePage() {
                 }
 
                 // Get project by token using RPC function
-                const { data: projectData, error: projectError } = await supabase.rpc('get_project_by_token', {
+                const { data: projectData, error: projectError } = await (supabase.rpc as any)('get_project_by_token', {
                     p_token: token
                 })
 
@@ -126,7 +126,7 @@ export default function ClientInvitePage() {
             }
 
             // Link account to project invitation using RPC
-            const { data: linkData, error: linkError } = await supabase.rpc('link_client_account', {
+            const { data: linkData, error: linkError } = await (supabase.rpc as any)('link_client_account', {
                 p_token: token,
                 p_user_id: userId
             })

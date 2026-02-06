@@ -67,13 +67,13 @@ export function WorkspaceSection() {
         setIsSaving(true)
         const supabase = createClient()
 
-        const { error } = await supabase
-            .from('workspaces')
+        const { error } = await (supabase
+            .from('workspaces') as any)
             .update({
                 name: workspaceName,
                 description: description,
                 color: color
-            } as any)
+            })
             .eq('id', currentWorkspace.id)
 
         setIsSaving(false)

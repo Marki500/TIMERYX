@@ -27,7 +27,7 @@ export async function inviteMember(workspaceId: string, email: string, role: str
             .select('role, workspaces(name)')
             .eq('workspace_id', workspaceId)
             .eq('user_id', user.id)
-            .single()
+            .single() as any
 
         if (memberError || !memberData || !['owner', 'admin'].includes(memberData.role)) {
             return { error: 'No tienes permisos para invitar miembros a este workspace' }
@@ -49,7 +49,7 @@ export async function inviteMember(workspaceId: string, email: string, role: str
                 invited_by: user.id,
                 token: token,
                 expires_at: expiresAt.toISOString()
-            })
+            } as any)
 
         if (insertError) {
             console.error('Error creating invitation:', insertError)

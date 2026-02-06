@@ -54,12 +54,12 @@ export function useDashboardData() {
 
 
         // Fetch time entries
-        const { data: entries, error: entriesError } = await supabase
+        const { data: entries, error: entriesError } = await (supabase
             .from('time_entries')
             .select('*')
             .eq('user_id', user.id)
             .gte('start_time', sevenDaysAgo.toISOString())
-            .order('start_time', { ascending: false })
+            .order('start_time', { ascending: false }) as any)
 
         if (entriesError) {
             console.error('Error fetching entries:', entriesError)
@@ -67,16 +67,16 @@ export function useDashboardData() {
 
         if (entries && entries.length > 0) {
             // Get unique task IDs
-            const taskIds = [...new Set(entries.map(e => e.task_id).filter(Boolean))] as string[]
+            const taskIds = [...new Set(entries.map((e: any) => e.task_id).filter(Boolean))] as string[]
 
             // Fetch tasks separately
-            const { data: tasks } = await supabase
+            const { data: tasks } = await (supabase
                 .from('tasks')
                 .select('id, title, status')
-                .in('id', taskIds)
+                .in('id', taskIds) as any)
 
             // Create a map of task_id -> task
-            const taskMap = new Map(tasks?.map(t => [t.id, t]) || [])
+            const taskMap = new Map(tasks?.map((t: any) => [t.id, t]) || [])
 
             // Aggregate by day for weekly chart
             const dayMap = new Map<string, number>()
@@ -125,7 +125,7 @@ export function useDashboardData() {
                     : 0
 
                 // Get task from map
-                const task = entry.task_id ? taskMap.get(entry.task_id) : null
+                const task = entry.task_id ? taskMap.get(entry.task_id) : null as any
                 const taskTitle = task?.title || entry.description || 'Untitled Task'
 
                 return {

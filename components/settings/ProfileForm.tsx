@@ -24,9 +24,9 @@ export function ProfileForm() {
         setMessage('')
         const supabase = createClient()
 
-        const { error } = await supabase
-            .from('profiles')
-            .update({ full_name: fullName, updated_at: new Date().toISOString() } as any)
+        const { error } = await (supabase
+            .from('profiles') as any)
+            .update({ full_name: fullName, updated_at: new Date().toISOString() })
             .eq('id', profile.id)
 
         if (error) {

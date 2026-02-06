@@ -84,12 +84,12 @@ export function ProjectChat({ projectId, userType }: ProjectChatProps) {
         setLoading(true)
 
         // First, get messages
-        const { data: messagesData, error: messagesError } = await supabase
+        const { data: messagesData, error: messagesError } = await (supabase
             .from('project_messages')
             .select('*')
             .eq('project_id', projectId)
             .order('created_at', { ascending: true })
-            .limit(100)
+            .limit(100) as any)
 
         if (messagesError || !messagesData) {
             console.error('Error loading messages:', messagesError)
@@ -98,25 +98,25 @@ export function ProjectChat({ projectId, userType }: ProjectChatProps) {
         }
 
         // Get unique user IDs
-        const userIds = [...new Set(messagesData.map(m => m.user_id))]
+        const userIds = [...new Set(messagesData.map((m: any) => m.user_id))]
 
         // Fetch profiles for these users
-        const { data: profilesData } = await supabase
+        const { data: profilesData } = await (supabase
             .from('profiles')
             .select('id, full_name, display_name, avatar_url')
-            .in('id', userIds)
+            .in('id', userIds) as any)
 
         // Check which users are workspace members
-        const { data: membersData } = await supabase
+        const { data: membersData } = await (supabase
             .from('workspace_members')
             .select('user_id')
-            .in('user_id', userIds)
+            .in('user_id', userIds) as any)
 
-        const memberIds = new Set(membersData?.map(m => m.user_id) || [])
+        const memberIds = new Set(membersData?.map((m: any) => m.user_id) || [])
 
         // Create a map of user_id -> profile with role
         const profilesMap = new Map(
-            profilesData?.map(p => [p.id, {
+            profilesData?.map((p: any) => [p.id, {
                 ...p,
                 // Prioritize display_name, fallback to full_name
                 full_name: (p as any).display_name || p.full_name,
@@ -125,7 +125,7 @@ export function ProjectChat({ projectId, userType }: ProjectChatProps) {
         )
 
         // Combine messages with profiles
-        const messagesWithProfiles = messagesData.map(msg => ({
+        const messagesWithProfiles = messagesData.map((msg: any) => ({
             ...msg,
             profiles: profilesMap.get(msg.user_id)
         }))
@@ -144,7 +144,7 @@ export function ProjectChat({ projectId, userType }: ProjectChatProps) {
                 project_id: projectId,
                 message: newMessage.trim(),
                 user_id: profile?.id
-            })
+            } as any)
 
         if (!error) {
             setNewMessage('')
@@ -160,8 +160,8 @@ export function ProjectChat({ projectId, userType }: ProjectChatProps) {
     const saveEdit = async () => {
         if (!editText.trim() || !editingId) return
 
-        const { error } = await supabase
-            .from('project_messages')
+        const { error } = await (supabase
+            .from('project_messages') as any)
             .update({
                 message: editText.trim(),
                 is_edited: true,

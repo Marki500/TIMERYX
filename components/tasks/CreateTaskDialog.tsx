@@ -94,7 +94,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate, initialProjectI
                     .select('id')
                     .eq('workspace_id', currentWorkspace.id)
                     .eq('name', 'Inbox')
-                    .single()
+                    .single() as any
 
                 if (inboxProject) {
                     finalProjectId = inboxProject.id
@@ -108,7 +108,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate, initialProjectI
                             budget_hours_monthly: 0
                         } as any)
                         .select()
-                        .single()
+                        .single() as any
                     finalProjectId = (newProject as any)?.id
                 }
             }

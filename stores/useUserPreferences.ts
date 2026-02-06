@@ -47,8 +47,8 @@ export const useUserPreferences = create<UserPreferencesState>((set, get) => ({
         if (error) {
             // If no preferences exist, create default ones
             if (error.code === 'PGRST116') {
-                const { data: newPrefs, error: insertError } = await supabase
-                    .from('user_preferences')
+                const { data: newPrefs, error: insertError } = await (supabase
+                    .from('user_preferences') as any)
                     .insert({ user_id: user.id })
                     .select()
                     .single()
@@ -72,8 +72,8 @@ export const useUserPreferences = create<UserPreferencesState>((set, get) => ({
 
         if (!currentPrefs) return
 
-        const { data, error } = await supabase
-            .from('user_preferences')
+        const { data, error } = await (supabase
+            .from('user_preferences') as any)
             .update(updates)
             .eq('id', currentPrefs.id)
             .select()

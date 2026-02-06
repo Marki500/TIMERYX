@@ -95,7 +95,7 @@ export default function DashboardLayout({
 
                 // Generate unique slug
                 const slug = `workspace-${Math.random().toString(36).substring(7)}`
-                const { data: workspaceId, error } = await supabase.rpc('create_workspace', {
+                const { data: workspaceId, error } = await (supabase.rpc as any)('create_workspace', {
                     // @ts-ignore - Supabase types might be out of sync
                     p_name: 'My Workspace',
                     p_slug: slug
@@ -127,7 +127,7 @@ export default function DashboardLayout({
                 .select('role')
                 .eq('workspace_id', currentWorkspace.id)
                 .eq('user_id', user.id)
-                .single()
+                .single() as any
 
             if (membership?.role) {
                 setCurrentRole(membership.role as any)

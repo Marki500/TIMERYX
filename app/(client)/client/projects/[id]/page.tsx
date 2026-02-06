@@ -218,10 +218,10 @@ export default function ClientProjectDetail() {
                     <div className="h-3 bg-white/5 rounded-full overflow-hidden">
                         <div
                             className={`h-full transition-all ${budgetUsage > 100
-                                    ? 'bg-red-500'
-                                    : budgetUsage > 80
-                                        ? 'bg-orange-500'
-                                        : 'bg-blue-500'
+                                ? 'bg-red-500'
+                                : budgetUsage > 80
+                                    ? 'bg-orange-500'
+                                    : 'bg-blue-500'
                                 }`}
                             style={{ width: `${Math.min(budgetUsage, 100)}%` }}
                         />

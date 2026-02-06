@@ -33,7 +33,7 @@ export async function inviteClient(
             .from('projects')
             .select('workspace_id')
             .eq('id', projectId)
-            .single()
+            .single() as any
 
         if (!project) {
             return { success: false, error: 'Project not found' }
@@ -44,7 +44,7 @@ export async function inviteClient(
             .select('role')
             .eq('workspace_id', project.workspace_id)
             .eq('user_id', user.id)
-            .single()
+            .single() as any
 
         if (!membership || membership.role !== 'admin') {
             return { success: false, error: 'Only admins can invite clients' }
@@ -59,7 +59,7 @@ export async function inviteClient(
             .select('id, access_token')
             .eq('project_id', projectId)
             .eq('email', email.toLowerCase())
-            .single()
+            .single() as any
 
         if (existing) {
             // Return existing invitation
@@ -80,7 +80,7 @@ export async function inviteClient(
                 access_token: accessToken,
                 invited_by: user.id,
                 allow_registration: allowRegistration
-            })
+            } as any)
 
         if (insertError) {
             console.error('Error creating invitation:', insertError)

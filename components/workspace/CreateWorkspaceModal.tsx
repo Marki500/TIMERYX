@@ -30,7 +30,7 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
         try {
             const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Math.random().toString(36).substring(7)
 
-            const { error } = await supabase.rpc('create_workspace', {
+            const { error } = await (supabase.rpc as any)('create_workspace', {
                 p_name: name,
                 p_slug: slug
             })
@@ -42,15 +42,15 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
                 .from('workspaces')
                 .select('*')
                 .eq('slug', slug)
-                .single()
+                .single() as any
 
             if (workspaces) {
-                await supabase
-                    .from('workspaces')
+                await (supabase
+                    .from('workspaces') as any)
                     .update({
                         description: description || null,
                         color: color
-                    } as any)
+                    })
                     .eq('id', workspaces.id)
             }
 

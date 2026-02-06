@@ -11,7 +11,7 @@ interface TaskState {
     tasks: Task[]
     isLoading: boolean
     viewMode: ViewMode
-    viewMode: ViewMode
+
     filterStatus: Task['status'] | 'all'
     currentProjectId: string | null
 
@@ -55,12 +55,12 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
         if (!user) return null
 
-        const { data, error } = await supabase
-            .from('tasks')
+        const { data, error } = await (supabase
+            .from('tasks') as any)
             .insert({
                 ...task,
                 created_by: user.id,
-            } as any)
+            })
             .select()
             .single()
 
@@ -94,9 +94,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         })
 
         const supabase = createClient()
-        const { error } = await supabase
-            .from('tasks')
-            .update(updates as any)
+        const { error } = await (supabase
+            .from('tasks') as any)
+            .update(updates)
             .eq('id', id)
 
         if (error) {
@@ -110,8 +110,8 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         }))
 
         const supabase = createClient()
-        const { error } = await supabase
-            .from('tasks')
+        const { error } = await (supabase
+            .from('tasks') as any)
             .delete()
             .eq('id', id)
 
