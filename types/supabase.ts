@@ -260,5 +260,48 @@ export interface Database {
             }
             Returns: (Database['public']['Tables']['tasks']['Row'] & { total_duration: number })[]
         }
+        get_client_projects: {
+            Args: {
+                p_user_id: string
+            }
+            Returns: {
+                project_id: string
+                project_name: string
+                project_color: string
+                project_description: string
+                project_budget_hours_monthly: number
+                workspace_id: string
+                access_token: string
+            }[]
+        }
+        get_project_by_token: {
+            Args: {
+                p_token: string
+            }
+            Returns: {
+                project_id: string
+                project_name: string
+                project_color: string
+                project_description: string
+                project_budget_hours_monthly: number
+                client_email: string
+                client_user_id: string
+                workspace_id: string
+                allow_registration: boolean
+            }[]
+        }
+        link_client_account: {
+            Args: {
+                p_token: string
+                p_user_id: string
+            }
+            Returns: boolean
+        }
+        is_client_user: {
+            Args: {
+                p_user_id: string
+            }
+            Returns: boolean
+        }
     }
 }
