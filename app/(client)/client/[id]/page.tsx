@@ -40,7 +40,7 @@ export default function ClientProjectDetailPage() {
             }
 
             // Get client's projects to verify access
-            const { data: clientProjects } = await supabase.rpc('get_client_projects', {
+            const { data: clientProjects } = await (supabase.rpc as any)('get_client_projects', {
                 p_user_id: user.id
             })
 
