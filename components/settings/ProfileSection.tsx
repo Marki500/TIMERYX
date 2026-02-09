@@ -14,6 +14,7 @@ export function ProfileSection() {
     const [bio, setBio] = useState('')
     const [avatarUrl, setAvatarUrl] = useState('')
     const [timezone, setTimezone] = useState('UTC')
+    const [phone, setPhone] = useState('')
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -25,7 +26,7 @@ export function ProfileSection() {
             const supabase = createClient()
             const { data } = await supabase
                 .from('profiles')
-                .select('display_name, bio, avatar_url')
+                .select('display_name, bio, avatar_url, phone')
                 .eq('id', profile.id)
                 .single()
 
@@ -33,6 +34,7 @@ export function ProfileSection() {
                 setDisplayName((data as any).display_name || '')
                 setBio((data as any).bio || '')
                 setAvatarUrl((data as any).avatar_url || '')
+                setPhone((data as any).phone || '')
             }
         }
 
@@ -94,7 +96,8 @@ export function ProfileSection() {
             .from('profiles') as any)
             .update({
                 display_name: displayName,
-                bio: bio
+                bio: bio,
+                phone: phone
             })
             .eq('id', profile.id)
 
@@ -107,7 +110,8 @@ export function ProfileSection() {
             setProfile({
                 ...profile,
                 display_name: displayName,
-                bio: bio
+                bio: bio,
+                phone: phone
             } as any)
         } else {
             addToast('Error al actualizar el perfil', 'error')
@@ -195,6 +199,23 @@ export function ProfileSection() {
                     rows={3}
                     className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all hover:bg-white/10 backdrop-blur-xl resize-none"
                 />
+            </div>
+
+            {/* WhatsApp Phone */}
+            <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                    Teléfono WhatsApp
+                </label>
+                <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Ej: 34600000000 (sin el +)"
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all hover:bg-white/10 backdrop-blur-xl"
+                />
+                <p className="mt-1 text-xs text-zinc-500">
+                    Incluye el código de país sin el símbolo +. Necesario para que el bot te reconozca.
+                </p>
             </div>
 
             {/* Timezone */}

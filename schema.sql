@@ -25,6 +25,7 @@ CREATE TABLE profiles (
     email TEXT UNIQUE NOT NULL,
     full_name TEXT,
     avatar_url TEXT,
+    phone TEXT UNIQUE, -- WhatsApp phone number
     active_timer_id UUID, -- FK to time_entries, ensures only ONE active timer
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
