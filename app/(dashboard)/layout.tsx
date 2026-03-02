@@ -1,149 +1,96 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { FloatingDock } from '@/components/layout/FloatingDock'
-import { motion } from 'framer-motion'
-import { createClient } from '@/lib/supabase/client'
-import { useUserStore } from '@/stores/useUserStore'
-import { useProjectStore } from '@/stores/useProjectStore'
-import { TimerBar } from '@/components/timer/TimerBar'
-import { ActiveTimer } from '@/components/timer/ActiveTimer'
-import { ToastContainer } from '@/components/ui/ToastContainer'
-import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher'
-
-import { DndProvider } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
-import { NotificationCenter } from '@/components/notifications/NotificationCenter'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { NotificationCenter } from '@/components/notifications/NotificationCenter'
+import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher'
+import { TimerBar } from '@/components/timer/TimerBar'
+import { DashboardClientProvider } from '@/components/providers/DashboardClientProvider'
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
-    const { setProfile, setWorkspaces, setCurrentWorkspace, setCurrentRole, currentWorkspace, currentRole, profile } = useUserStore()
-    const { fetchProjects } = useProjectStore()
-    const router = useRouter()
-    const supabase = createClient()
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    useEffect(() => {
-        async function loadData() {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return
+    if (!user) {
+        redirect('/login')
+    }
 
-            // Check if user is a client (has project_clients but no workspace_members)
-            const { data: clientData } = await supabase
-                .from('project_clients')
-                .select('id')
-                .eq('user_id', user.id)
-                .limit(1)
+    // Check if user is a client only
+    const { data: clientData } = await supabase
+        .from('project_clients')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1)
 
-            const { data: memberData } = await supabase
-                .from('workspace_members')
-                .select('id')
-                .eq('user_id', user.id)
-                .limit(1)
+    const { data: memberData } = await supabase
+        .from('workspace_members')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1)
 
-            const hasClientAccess = clientData && clientData.length > 0
-            const hasMemberAccess = memberData && memberData.length > 0
+    const hasClientAccess = clientData && clientData.length > 0
+    const hasMemberAccess = memberData && memberData.length > 0
 
-            if (hasClientAccess && !hasMemberAccess) {
-                // User is a client only, redirect to client portal
-                router.push('/client')
-                return
-            }
+    if (hasClientAccess && !hasMemberAccess) {
+        redirect('/client')
+    }
 
-            if (!hasMemberAccess) {
-                // User has no access, redirect to login
-                router.push('/login')
-                return
-            }
+    if (!hasMemberAccess) {
+        redirect('/login')
+    }
 
-            // Load Profile
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single()
+    // Load Profile
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single() as { data: any }
 
-            if (profile) setProfile(profile)
-
-            // Load Workspaces via Memberships
-            const { data: members } = await supabase
-                .from('workspace_members')
-                .select(`
-           workspace_id,
-           role,
-           workspaces:workspace_id ( * )
+    // Load Workspaces via Memberships
+    const { data: members } = await supabase
+        .from('workspace_members')
+        .select(`
+            workspace_id,
+            role,
+            workspaces:workspace_id ( * )
         `)
-                .eq('user_id', user.id)
+        .eq('user_id', user.id)
 
-            if (members && members.length > 0) {
-                const joinedWorkspaces = members.map((m: any) => m.workspaces).filter(Boolean)
-                setWorkspaces(joinedWorkspaces)
+    let joinedWorkspaces: any[] = []
+    let initialWorkspaceData = null
 
-                if (joinedWorkspaces.length > 0 && !currentWorkspace) {
-                    setCurrentWorkspace(joinedWorkspaces[0])
-                    // Set role for first workspace
-                    const firstMembership: any = members.find((m: any) => m.workspaces?.id === joinedWorkspaces[0].id)
-                    if (firstMembership?.role) {
-                        setCurrentRole(firstMembership.role)
-                    }
-                }
-            } else {
-                // No workspaces found. Auto-create one for onboarding.
-                console.log('No workspaces found. Auto-creating...')
+    if (members && members.length > 0) {
+        joinedWorkspaces = members.map((m: any) => m.workspaces).filter(Boolean)
 
-                // Generate unique slug
-                const slug = `workspace-${Math.random().toString(36).substring(7)}`
-                const { data: workspaceId, error } = await (supabase.rpc as any)('create_workspace', {
-                    // @ts-ignore - Supabase types might be out of sync
-                    p_name: 'My Workspace',
-                    p_slug: slug
-                })
-
-                if (error) {
-                    console.error('Error creating workspace:', error)
-                } else if (workspaceId) {
-                    // Refresh data
-                    loadData()
-                }
+        if (joinedWorkspaces.length > 0) {
+            const firstMembership: any = members.find((m: any) => m.workspaces?.id === joinedWorkspaces[0].id)
+            initialWorkspaceData = {
+                workspace: joinedWorkspaces[0],
+                role: firstMembership?.role || null
             }
         }
+    } else {
+        // No workspaces found. Auto-create one for onboarding.
+        const slug = `workspace-${Math.random().toString(36).substring(7)}`
+        await (supabase.rpc as any)('create_workspace', {
+            // @ts-ignore
+            p_name: 'My Workspace',
+            p_slug: slug
+        })
 
-        loadData()
-    }, []) // execute once on mount
-
-    // Load projects when workspace changes and update role
-    useEffect(() => {
-        async function updateWorkspaceData() {
-            if (!currentWorkspace?.id) return
-
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return
-
-            // Fetch user's role in current workspace
-            const { data: membership } = await supabase
-                .from('workspace_members')
-                .select('role')
-                .eq('workspace_id', currentWorkspace.id)
-                .eq('user_id', user.id)
-                .single() as any
-
-            if (membership?.role) {
-                setCurrentRole(membership.role as any)
-            }
-
-            // Fetch projects
-            fetchProjects(currentWorkspace.id)
-        }
-
-        updateWorkspaceData()
-    }, [currentWorkspace?.id, fetchProjects, setCurrentRole])
+        // This will require a refresh, but typically users fall into one or the other. Note in production
+        // we might redirect to a setup page. We'll simply let the layout finish rendering.
+    }
 
     return (
-        <DndProvider backend={HTML5Backend}>
+        <DashboardClientProvider
+            initialProfile={profile}
+            initialWorkspaces={joinedWorkspaces}
+            initialWorkspaceData={initialWorkspaceData}
+        >
             <div className="flex h-screen w-full bg-background text-foreground overflow-hidden font-sans selection:bg-primary-500/30 relative">
                 {/* Background Ambience - Auroras */}
                 <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -184,26 +131,13 @@ export default function DashboardLayout({
 
                         {/* Content Area */}
                         <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-32 relative z-10 custom-scrollbar">
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="min-h-full bg-[#0a0a0a]/80 backdrop-blur-md border border-white/10 rounded-[2.5rem] p-6 md:p-8 shadow-2xl relative ring-1 ring-white/5"
-                            >
+                            <div className="min-h-full bg-[#0a0a0a]/80 backdrop-blur-md border border-white/10 rounded-[2.5rem] p-6 md:p-8 shadow-2xl relative ring-1 ring-white/5">
                                 {children}
-                            </motion.div>
+                            </div>
                         </div>
                     </main>
                 </div>
-
-                {/* Unified Floating Dock */}
-                <FloatingDock />
-
-                {/* Floating Active Timer */}
-                <ActiveTimer />
-
-                {/* Toast Notifications */}
-                <ToastContainer />
             </div>
-        </DndProvider>
+        </DashboardClientProvider>
     )
 }

@@ -15,7 +15,10 @@ import { formatDuration } from '@/lib/utils'
 
 import { WeeklyActivityChart } from '@/components/dashboard/WeeklyActivityChart'
 import { RecentActivity } from '@/components/dashboard/RecentActivity'
+import { WeeklyActivityChartWrapper, RecentActivityWrapper } from '@/components/dashboard/DashboardDataWrappers'
+import { ActivityChartSkeleton, RecentActivitySkeleton, DashboardStatsSkeleton } from '@/components/dashboard/DashboardSkeletons'
 import { useDashboardData } from '@/hooks/useDashboardData'
+import { Suspense } from 'react'
 
 export default function DashboardPage() {
     const { tasks, fetchTasks, createTask, viewMode } = useTaskStore()
@@ -150,10 +153,14 @@ export default function DashboardPage() {
             {/* Activity Chart & Tasks Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 h-[350px] lg:h-[450px]">
-                    <WeeklyActivityChart />
+                    <Suspense fallback={<ActivityChartSkeleton />}>
+                        <WeeklyActivityChartWrapper />
+                    </Suspense>
                 </div>
                 <div className="h-[350px] lg:h-[450px]">
-                    <RecentActivity />
+                    <Suspense fallback={<RecentActivitySkeleton />}>
+                        <RecentActivityWrapper />
+                    </Suspense>
                 </div>
             </div>
 

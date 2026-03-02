@@ -55,9 +55,29 @@ export const useTimerStore = create<TimerState>((set, get) => ({
     },
 
     startTimer: async (taskId, taskTitle, description) => {
-        set({ isLoading: true })
-        const supabase = createClient()
+        const tempEntryId = `temp-${Date.now()}`
+        const tempEntry: TimeEntry = {
+            id: tempEntryId,
+            task_id: taskId,
+            start_time: new Date().toISOString(),
+            end_time: null,
+            user_id: 'temp-user', // Not needed for UI usually
+            description: description || null,
+            is_manual: false,
+            created_at: new Date().toISOString()
+        }
 
+        // Optimistic UI Update
+        set({
+            activeEntry: tempEntry,
+            taskTitle,
+            duration: 0,
+            isLoading: false,
+            isPaused: false,
+            pausedAt: null
+        })
+
+        const supabase = createClient()
         // Call RPC to start timer (handles stopping previous one)
         const { data, error } = await (supabase.rpc as any)('start_timer', {
             p_task_id: taskId,
@@ -66,13 +86,17 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
         if (error) {
             console.error('Error starting timer:', error)
-            set({ isLoading: false })
+            // Rollback optimistic update
+            set({
+                activeEntry: null,
+                taskTitle: null,
+                duration: 0
+            })
             return
         }
 
-        // Refresh active timer
+        // Refresh active timer silently in background to get real IDs
         await get().fetchActiveTimer()
-        set({ taskTitle, isLoading: false, isPaused: false, pausedAt: null })
 
         // Save to localStorage
         if (typeof window !== 'undefined') {
@@ -88,35 +112,15 @@ export const useTimerStore = create<TimerState>((set, get) => ({
     },
 
     stopTimer: async () => {
-        set({ isLoading: true })
-        const supabase = createClient()
-
-        // Call RPC to stop timer
-        const { error } = await supabase.rpc('stop_timer')
-
-        if (error) {
-            console.error('Error stopping timer via RPC:', error)
-
-            // Fallback: try to manually clear the active_timer_id
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                // @ts-ignore - Supabase types are incorrectly generated for profiles table
-                const { error: updateError } = await (supabase
-                    .from('profiles') as any)
-                    .update({ active_timer_id: null })
-                    .eq('id', user.id)
-
-                if (updateError) {
-                    console.error('Error clearing active_timer_id manually:', updateError)
-                }
-            }
+        const previousState = {
+            activeEntry: get().activeEntry,
+            taskTitle: get().taskTitle,
+            duration: get().duration,
+            isPaused: get().isPaused,
+            pausedAt: get().pausedAt
         }
 
-        // Refresh tasks to show updated duration (preserve current project filter)
-        const currentProjectId = useTaskStore.getState().currentProjectId
-        await useTaskStore.getState().fetchTasks(currentProjectId || undefined)
-
-        // Clear state and localStorage
+        // Optimistic UI Update: Clear immediately
         set({
             activeEntry: null,
             taskTitle: null,
@@ -130,7 +134,51 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             localStorage.removeItem(STORAGE_KEY)
         }
 
-        // Trigger dashboard refresh
+        // Optimistically update the specific task's duration in TaskStore if we know the ID
+        const taskId = previousState.activeEntry?.task_id
+        if (taskId) {
+            const taskStore = useTaskStore.getState()
+            const task = taskStore.tasks.find(t => t.id === taskId)
+            if (task) {
+                const newTotalDuration = (task.total_duration || 0) + previousState.duration
+                taskStore.updateTask(taskId, { total_duration: newTotalDuration })
+            }
+        }
+
+        const supabase = createClient()
+
+        // Call RPC to stop timer
+        const { error } = await supabase.rpc('stop_timer')
+
+        if (error) {
+            console.error('Error stopping timer via RPC:', error)
+
+            // Rollback optimistic update
+            set(previousState)
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(previousState))
+            }
+
+            // Fallback: try to manually clear the active_timer_id
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                // @ts-ignore
+                const { error: updateError } = await (supabase
+                    .from('profiles') as any)
+                    .update({ active_timer_id: null })
+                    .eq('id', user.id)
+
+                if (updateError) {
+                    console.error('Error clearing active_timer_id manually:', updateError)
+                }
+            }
+        } else {
+            // Refresh tasks in background to ensure sync (preserve current filter)
+            const currentProjectId = useTaskStore.getState().currentProjectId
+            useTaskStore.getState().fetchTasks(currentProjectId || undefined)
+        }
+
+        // Trigger dashboard refresh silently in background
         useDashboardStore.getState().triggerRefresh()
     },
 
