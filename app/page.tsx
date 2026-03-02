@@ -87,27 +87,25 @@ export default function AuthPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#111111] to-[#1a0a2e]">
                 {/* Floating Orbs */}
                 <motion.div
-                    className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/20 rounded-full blur-[120px]"
+                    className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl"
                     animate={{
-                        x: [0, 50, 0],
-                        y: [0, 30, 0],
-                        scale: [1, 1.1, 1],
+                        x: [0, 30, 0],
+                        y: [0, 20, 0],
                     }}
                     transition={{
-                        duration: 8,
+                        duration: 10,
                         repeat: Infinity,
                         ease: "easeInOut"
                     }}
                 />
                 <motion.div
-                    className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[120px]"
+                    className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
                     animate={{
-                        x: [0, -50, 0],
-                        y: [0, -30, 0],
-                        scale: [1, 1.2, 1],
+                        x: [0, -30, 0],
+                        y: [0, -20, 0],
                     }}
                     transition={{
-                        duration: 10,
+                        duration: 12,
                         repeat: Infinity,
                         ease: "easeInOut"
                     }}
@@ -141,12 +139,12 @@ export default function AuthPage() {
                     className="relative"
                 >
                     {/* Glow Effect */}
-                    <div className="absolute -inset-1 bg-gradient-to-r from-primary-500/20 to-blue-500/20 rounded-3xl blur-xl" />
+                    <div className="absolute -inset-1 bg-gradient-to-r from-primary-500/10 to-blue-500/10 rounded-3xl blur-lg" />
 
                     {/* Main Card */}
-                    <div className="relative bg-white/[0.03] backdrop-blur-2xl p-8 rounded-3xl border border-white/10 shadow-2xl">
+                    <div className="relative bg-[#0a0a0a]/80 backdrop-blur-xl p-8 rounded-3xl border border-white/10 shadow-2xl">
                         {/* Tabs with iOS Style */}
-                        <div className="flex gap-1 mb-8 p-1.5 bg-white/[0.05] backdrop-blur-xl rounded-2xl border border-white/10">
+                        <div className="flex gap-1 mb-8 p-1.5 bg-white/[0.05] rounded-2xl border border-white/10">
                             <button
                                 onClick={() => switchTab('login')}
                                 className="relative flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-300"

@@ -146,11 +146,10 @@ export default function DashboardLayout({
         <DndProvider backend={HTML5Backend}>
             <div className="flex h-screen w-full bg-background text-foreground overflow-hidden font-sans selection:bg-primary-500/30 relative">
                 {/* Background Ambience - Auroras */}
-                <div className="fixed inset-0 pointer-events-none z-0">
-                    <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-gradient-to-br from-indigo-500/80 via-blue-500/60 to-transparent rounded-full blur-[100px] animate-slow-glow" />
-                    <div className="absolute bottom-[-10%] right-[-5%] w-[60%] h-[60%] bg-gradient-to-tl from-purple-500/80 via-primary-500/60 to-transparent rounded-full blur-[80px] animate-slow-glow" style={{ animationDelay: '4s' }} />
-                    <div className="absolute top-[20%] right-[20%] w-[40%] h-[40%] bg-blue-400/40 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
-                    <div className="absolute inset-0 bg-noise opacity-[0.05] mix-blend-overlay" />
+                <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                    <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-gradient-to-br from-indigo-500/30 via-blue-500/20 to-transparent rounded-full blur-3xl" />
+                    <div className="absolute bottom-[-10%] right-[-5%] w-[60%] h-[60%] bg-gradient-to-tl from-purple-500/30 via-primary-500/20 to-transparent rounded-full blur-3xl" />
+                    <div className="absolute top-[20%] right-[20%] w-[40%] h-[40%] bg-blue-400/10 rounded-full blur-3xl" />
                 </div>
 
                 <div className="relative z-20 flex h-full w-full justify-center">
@@ -188,7 +187,7 @@ export default function DashboardLayout({
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="min-h-full bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 md:p-8 shadow-2xl relative ring-1 ring-white/5"
+                                className="min-h-full bg-[#0a0a0a]/80 backdrop-blur-md border border-white/10 rounded-[2.5rem] p-6 md:p-8 shadow-2xl relative ring-1 ring-white/5"
                             >
                                 {children}
                             </motion.div>
