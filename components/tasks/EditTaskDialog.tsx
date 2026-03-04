@@ -83,10 +83,7 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
 
         setIsSubmitting(true)
         try {
-            // If duration changed, update total_duration directly
-            const originalDuration = (task as any).total_duration || 0
-            const durationChanged = totalDurationSeconds !== originalDuration
-
+            // Update task fields (without total_duration — it's computed)
             await updateTask(task.id, {
                 title,
                 description,
@@ -94,8 +91,13 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
                 status,
                 project_id: selectedProjectId || undefined,
                 due_date: dueDate ? new Date(dueDate).toISOString() : null,
-                ...(durationChanged ? { total_duration: totalDurationSeconds } : {})
             })
+
+            // If duration changed, replace time entries with the new total
+            const originalDuration = (task as any).total_duration || 0
+            if (totalDurationSeconds !== originalDuration) {
+                await useTimerStore.getState().setTaskDuration(task.id, totalDurationSeconds)
+            }
 
             onClose()
         } catch (error) {

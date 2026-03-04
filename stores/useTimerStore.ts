@@ -24,6 +24,7 @@ interface TimerState {
     tick: () => void
     loadFromStorage: () => void
     addManualEntry: (taskId: string, durationSeconds: number, date: string) => Promise<void>
+    setTaskDuration: (taskId: string, newTotalSeconds: number) => Promise<void>
 }
 
 const STORAGE_KEY = 'timeryx_active_timer'
@@ -313,6 +314,90 @@ export const useTimerStore = create<TimerState>((set, get) => ({
         await useTaskStore.getState().fetchTasks(currentProjectId || undefined)
 
         // Trigger dashboard refresh
+        useDashboardStore.getState().triggerRefresh()
+    },
+
+    setTaskDuration: async (taskId, newTotalSeconds) => {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('Not authenticated')
+
+        // 1. Fetch all existing time entries for this task to compute current total
+        const { data: entries, error: fetchError } = await (supabase
+            .from('time_entries') as any)
+            .select('*')
+            .eq('task_id', taskId)
+            .eq('user_id', user.id)
+            .order('start_time', { ascending: false })
+
+        if (fetchError) {
+            console.error('Error fetching entries:', fetchError)
+            throw fetchError
+        }
+
+        // Calculate current total from entries
+        const currentTotal = (entries || []).reduce((sum: number, e: any) => {
+            if (!e.end_time) return sum
+            const dur = (new Date(e.end_time).getTime() - new Date(e.start_time).getTime()) / 1000
+            return sum + Math.max(0, dur)
+        }, 0)
+
+        const diff = newTotalSeconds - currentTotal
+
+        if (Math.abs(diff) < 1) {
+            // No meaningful change
+            return
+        }
+
+        if (diff > 0) {
+            // ADDING TIME: create a new manual entry with the positive diff
+            const startTime = new Date()
+            startTime.setHours(12, 0, 0, 0)
+            const endTime = new Date(startTime.getTime() + diff * 1000)
+
+            const { error: insertError } = await (supabase.rpc as any)('add_manual_time_entry', {
+                p_task_id: taskId,
+                p_start_time: startTime.toISOString(),
+                p_end_time: endTime.toISOString(),
+                p_description: 'Manual time adjustment (+)'
+            })
+
+            if (insertError) {
+                console.error('Error adding time:', insertError)
+                throw insertError
+            }
+        } else {
+            // REDUCING TIME: trim entries from most recent, shortening end_time
+            let remaining = Math.abs(diff)
+
+            for (const entry of (entries || [])) {
+                if (remaining <= 0) break
+                if (!entry.end_time) continue
+
+                const entryDuration = (new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / 1000
+
+                if (entryDuration <= remaining) {
+                    // This entire entry needs to be removed
+                    await (supabase.from('time_entries') as any)
+                        .delete()
+                        .eq('id', entry.id)
+                    remaining -= entryDuration
+                } else {
+                    // Shorten this entry's end_time by the remaining amount
+                    const newEndTime = new Date(
+                        new Date(entry.end_time).getTime() - remaining * 1000
+                    )
+                    await (supabase.from('time_entries') as any)
+                        .update({ end_time: newEndTime.toISOString() })
+                        .eq('id', entry.id)
+                    remaining = 0
+                }
+            }
+        }
+
+        // Refresh tasks to update computed total_duration
+        const currentProjectId = useTaskStore.getState().currentProjectId
+        await useTaskStore.getState().fetchTasks(currentProjectId || undefined)
         useDashboardStore.getState().triggerRefresh()
     }
 }))
