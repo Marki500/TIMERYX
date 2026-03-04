@@ -74,12 +74,20 @@ export function ProjectList() {
                         >
                             <div className="flex items-start justify-between mb-4">
                                 <div className="flex items-center gap-3">
-                                    <div
-                                        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                                        style={{ backgroundColor: project.color }}
-                                    >
-                                        {project.name.charAt(0).toUpperCase()}
-                                    </div>
+                                    {(project as any).url ? (
+                                        <img
+                                            src={`https://www.google.com/s2/favicons?domain=${(project as any).url}&sz=128`}
+                                            alt={project.name}
+                                            className="w-10 h-10 rounded-lg object-contain bg-white/5 p-1"
+                                        />
+                                    ) : (
+                                        <div
+                                            className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                                            style={{ backgroundColor: project.color }}
+                                        >
+                                            {project.name.charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
                                     <div>
                                         <h3 className="text-white font-medium line-clamp-1">{project.name}</h3>
                                         <span className="text-xs text-zinc-500">

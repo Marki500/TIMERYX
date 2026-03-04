@@ -39,7 +39,7 @@ export function FloatingDock() {
 
     return (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-auto max-w-[95vw]">
-            <div className="relative flex items-end gap-2 p-2 rounded-2xl lg:rounded-3xl bg-white/10 backdrop-blur-3xl border border-white/20 shadow-2xl shadow-black/50 ring-1 ring-white/10 overflow-x-auto no-scrollbar">
+            <div className="relative flex items-end gap-2 p-2 rounded-2xl lg:rounded-3xl bg-white/10 backdrop-blur-3xl border border-white/20 shadow-2xl shadow-black/50 ring-1 ring-white/10">
                 {links.map((link, index) => {
                     const isActive = pathname === link.href
                     const isHovered = hoveredIndex === index

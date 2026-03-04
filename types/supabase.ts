@@ -102,6 +102,7 @@ export interface Database {
                     color: string
                     budget_hours_monthly: number
                     is_client_visible: boolean
+                    url: string | null
                 }
                 Insert: {
                     id?: string
@@ -111,6 +112,7 @@ export interface Database {
                     color?: string
                     budget_hours_monthly?: number
                     is_client_visible?: boolean
+                    url?: string | null
                 }
                 Update: {
                     id?: string
@@ -120,6 +122,7 @@ export interface Database {
                     color?: string
                     budget_hours_monthly?: number
                     is_client_visible?: boolean
+                    url?: string | null
                 }
             }
             tasks: {

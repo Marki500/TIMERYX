@@ -144,22 +144,43 @@ export function exportToPDF(entries: TimeEntry[], filename: string = 'time_entri
     doc.save(filename)
 }
 
+// Helper to convert hex to rgb
+function hexToRgb(hex: string): [number, number, number] {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? [
+        parseInt(result[1], 16),
+        parseInt(result[2], 16),
+        parseInt(result[3], 16)
+    ] : [113, 113, 122] // fallback zinc-500
+}
+
 export function exportMonthlyProjectPDF(entries: TimeEntry[], filename: string = 'resumen_mensual_proyectos.pdf') {
     const doc = new jsPDF()
 
-    // Add title
-    doc.setFontSize(18)
-    doc.setTextColor(99, 102, 241) // primary-500
-    doc.text('TIMERYX - Resumen Mensual por Proyecto y Tareas', 14, 20)
+    // Add Logo/Brand Title
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(22)
+    doc.setTextColor(99, 102, 241) // indigo-500
+    doc.text('TIMERYX', 14, 22)
+
+    doc.setFontSize(14)
+    doc.setTextColor(60, 60, 60)
+    doc.setFont("helvetica", "normal")
+    doc.text('Resumen Mensual por Proyecto y Tareas', 14, 30)
 
     // Add date
     doc.setFontSize(10)
     doc.setTextColor(100, 100, 100)
-    doc.text(`Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 28)
+    doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy')} a las ${format(new Date(), 'HH:mm')}`, 14, 38)
+
+    // Divider line
+    doc.setDrawColor(220, 220, 220)
+    doc.setLineWidth(0.5)
+    doc.line(14, 43, 196, 43)
 
     // Aggregate data by project and task
     interface TaskSummary { title: string; durationSeconds: number }
-    interface ProjectSummary { name: string; durationSeconds: number; tasks: Record<string, TaskSummary> }
+    interface ProjectSummary { name: string; color: string; durationSeconds: number; tasks: Record<string, TaskSummary> }
     const projectTotals: Record<string, ProjectSummary> = {}
 
     let totalSeconds = 0
@@ -175,10 +196,11 @@ export function exportMonthlyProjectPDF(entries: TimeEntry[], filename: string =
 
         const projectId = entry.task.project?.name || 'sin_proyecto'
         const projectName = entry.task.project?.name || 'Sin Proyecto Asignado'
+        const projectColor = entry.task.project?.color || '#71717a'
         const taskTitle = entry.task.title
 
         if (!projectTotals[projectId]) {
-            projectTotals[projectId] = { name: projectName, durationSeconds: 0, tasks: {} }
+            projectTotals[projectId] = { name: projectName, color: projectColor, durationSeconds: 0, tasks: {} }
         }
 
         projectTotals[projectId].durationSeconds += durationSeconds
@@ -199,16 +221,18 @@ export function exportMonthlyProjectPDF(entries: TimeEntry[], filename: string =
             const pMinutes = Math.floor((project.durationSeconds % 3600) / 60)
             const pPercentage = totalSeconds > 0 ? ((project.durationSeconds / totalSeconds) * 100).toFixed(1) + '%' : '0%'
 
-            // Add Project Row (bold, colored background)
+            const projectRgb = hexToRgb(project.color)
+
+            // Add Project Row (bold, very light tint background, colored text)
             tableBody.push([{
-                content: project.name,
-                styles: { fontStyle: 'bold', fillColor: [240, 240, 250], textColor: [0, 0, 0] }
+                content: project.name.toUpperCase(),
+                styles: { fontStyle: 'bold', fillColor: [248, 248, 250], textColor: projectRgb, cellPadding: { top: 4, bottom: 4, left: 4 } }
             }, {
                 content: `${pHours}h ${pMinutes}m`,
-                styles: { fontStyle: 'bold', fillColor: [240, 240, 250], textColor: [0, 0, 0] }
+                styles: { fontStyle: 'bold', fillColor: [248, 248, 250], textColor: [40, 40, 40], cellPadding: { top: 4, bottom: 4 } }
             }, {
                 content: pPercentage,
-                styles: { fontStyle: 'bold', fillColor: [240, 240, 250], textColor: [0, 0, 0] }
+                styles: { fontStyle: 'bold', fillColor: [248, 248, 250], textColor: [99, 102, 241], cellPadding: { top: 4, bottom: 4 } }
             }])
 
             // Add Task Rows
@@ -217,44 +241,63 @@ export function exportMonthlyProjectPDF(entries: TimeEntry[], filename: string =
                 .forEach(task => {
                     const tHours = Math.floor(task.durationSeconds / 3600)
                     const tMinutes = Math.floor((task.durationSeconds % 3600) / 60)
-                    const tPercentage = project.durationSeconds > 0 ? ((task.durationSeconds / project.durationSeconds) * 100).toFixed(1) + '% del proyecto' : '0%'
+                    const tPercentage = project.durationSeconds > 0 ? ((task.durationSeconds / project.durationSeconds) * 100).toFixed(1) + '%' : '0%'
 
                     tableBody.push([
-                        `  • ${task.title}`,
-                        `${tHours}h ${tMinutes}m`,
-                        tPercentage
+                        { content: `      •  ${task.title}`, styles: { textColor: [80, 80, 80] } },
+                        { content: `${tHours}h ${tMinutes}m`, styles: { textColor: [100, 100, 100] } },
+                        { content: `${tPercentage} del proyecto`, styles: { textColor: [120, 120, 120], fontSize: 8 } }
                     ])
                 })
         })
 
     // Add table
     autoTable(doc, {
-        head: [['Proyecto / Tarea', 'Tiempo Dedicado', 'Porcentaje']],
+        head: [['Proyecto / Tarea', 'Tiempo Dedicado', 'Proporción']],
         body: tableBody,
-        startY: 35,
-        theme: 'grid',
+        startY: 52,
+        theme: 'plain', // Use plain to control borders manually
         headStyles: {
-            fillColor: [99, 102, 241], // primary-500
+            fillColor: [15, 15, 15], // Dark header matching the dark mode UI
             textColor: [255, 255, 255],
             fontSize: 10,
-            fontStyle: 'bold'
+            fontStyle: 'bold',
+            cellPadding: 4,
+            halign: 'left'
         },
         bodyStyles: {
             fontSize: 9,
-            textColor: [60, 60, 60]
+            cellPadding: 3,
+            lineColor: [240, 240, 240],
+            lineWidth: { bottom: 0.1 }
         },
-        margin: { top: 35 }
+        columnStyles: {
+            0: { cellWidth: 100 },
+            1: { cellWidth: 40 },
+            2: { cellWidth: 40 }
+        },
+        margin: { top: 50, left: 14, right: 14 }
     })
 
     // Add footer with total
     const totalHours = Math.floor(totalSeconds / 3600)
     const totalMinutes = Math.floor((totalSeconds % 3600) / 60)
 
-    const finalY = (doc as any).lastAutoTable.finalY || 35
+    const finalY = (doc as any).lastAutoTable.finalY || 52
+
+    // Total Box
+    doc.setFillColor(245, 245, 250)
+    doc.roundedRect(14, finalY + 10, 182, 16, 2, 2, 'F')
+
     doc.setFontSize(12)
-    doc.setTextColor(0, 0, 0)
+    doc.setTextColor(40, 40, 40)
+    doc.setFont("helvetica", "normal")
+    doc.text('Tiempo Total Facturable:', 20, finalY + 20)
+
+    doc.setFontSize(14)
+    doc.setTextColor(99, 102, 241) // primary color
     doc.setFont("helvetica", "bold")
-    doc.text(`Tiempo Total Facturable: ${totalHours}h ${totalMinutes}m`, 14, finalY + 12)
+    doc.text(`${totalHours}h ${totalMinutes}m`, 85, finalY + 20)
 
     // Save PDF
     doc.save(filename)
