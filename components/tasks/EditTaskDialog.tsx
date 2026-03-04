@@ -83,6 +83,10 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
 
         setIsSubmitting(true)
         try {
+            // If duration changed, update total_duration directly
+            const originalDuration = (task as any).total_duration || 0
+            const durationChanged = totalDurationSeconds !== originalDuration
+
             await updateTask(task.id, {
                 title,
                 description,
@@ -90,18 +94,8 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
                 status,
                 project_id: selectedProjectId || undefined,
                 due_date: dueDate ? new Date(dueDate).toISOString() : null,
+                ...(durationChanged ? { total_duration: totalDurationSeconds } : {})
             })
-
-            // If duration changed, add adjustment entry
-            const originalDuration = (task as any).total_duration || 0
-            if (totalDurationSeconds !== originalDuration) {
-                const diff = totalDurationSeconds - originalDuration
-                await useTimerStore.getState().addManualEntry(
-                    task.id,
-                    diff,
-                    new Date().toISOString().split('T')[0]
-                )
-            }
 
             onClose()
         } catch (error) {
