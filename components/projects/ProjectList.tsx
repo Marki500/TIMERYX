@@ -9,10 +9,8 @@ import { useUserStore } from '@/stores/useUserStore'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { CreateProjectDialog } from './CreateProjectDialog'
 import { formatDuration } from '@/lib/utils'
-import { ProjectIcon } from '@/components/ui/ProjectIcon'
-import { EditProjectDialog } from './EditProjectDialog'
-import { CreateTaskDialog } from './CreateTaskDialog'
-import { EditTaskDialog } from './EditTaskDialog'
+import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog'
+import { EditTaskDialog } from '@/components/tasks/EditTaskDialog'
 
 export function ProjectList() {
     const { projects, fetchProjects, deleteProject, isLoading } = useProjectStore()
