@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { X, Globe } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useProjectStore } from '@/stores/useProjectStore'
-import { createClient } from '@/lib/supabase/client'
 
 interface EditProjectDialogProps {
     isOpen: boolean
