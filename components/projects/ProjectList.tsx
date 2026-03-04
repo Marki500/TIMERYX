@@ -2,19 +2,24 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Plus, Folder, Clock, MoreVertical, Trash2 } from 'lucide-react'
+import { Plus, Folder, Clock, MoreVertical, Trash2, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { CreateProjectDialog } from './CreateProjectDialog'
 import { formatDuration } from '@/lib/utils'
+import { ProjectIcon } from '@/components/ui/ProjectIcon'
+import { EditProjectDialog } from './EditProjectDialog'
+import { CreateTaskDialog } from './CreateTaskDialog'
+import { EditTaskDialog } from './EditTaskDialog'
 
 export function ProjectList() {
     const { projects, fetchProjects, deleteProject, isLoading } = useProjectStore()
     const { currentWorkspace } = useUserStore()
     const { tasks, fetchTasks } = useTaskStore()
     const [isCreateOpen, setIsCreateOpen] = useState(false)
+    const [editingProject, setEditingProject] = useState<any>(null)
 
     useEffect(() => {
         if (currentWorkspace) {
@@ -74,20 +79,7 @@ export function ProjectList() {
                         >
                             <div className="flex items-start justify-between mb-4">
                                 <div className="flex items-center gap-3">
-                                    {(project as any).url ? (
-                                        <img
-                                            src={`https://www.google.com/s2/favicons?domain=${(project as any).url}&sz=128`}
-                                            alt={project.name}
-                                            className="w-10 h-10 rounded-lg object-contain bg-white/5 p-1"
-                                        />
-                                    ) : (
-                                        <div
-                                            className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                                            style={{ backgroundColor: project.color }}
-                                        >
-                                            {project.name.charAt(0).toUpperCase()}
-                                        </div>
-                                    )}
+                                    <ProjectIcon project={project} size="lg" />
                                     <div>
                                         <h3 className="text-white font-medium line-clamp-1">{project.name}</h3>
                                         <span className="text-xs text-zinc-500">
@@ -95,14 +87,24 @@ export function ProjectList() {
                                         </span>
                                     </div>
                                 </div>
-                                <div className="relative">
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                    <button
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            setEditingProject(project)
+                                        }}
+                                        className="p-2 text-zinc-500 hover:text-white hover:bg-white/10 rounded-lg"
+                                    >
+                                        <Settings size={16} />
+                                    </button>
                                     <button
                                         onClick={(e) => {
                                             e.preventDefault()
                                             e.stopPropagation()
                                             confirm('Delete project?') && deleteProject(project.id)
                                         }}
-                                        className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                        className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
                                     >
                                         <Trash2 size={16} />
                                     </button>
@@ -151,6 +153,13 @@ export function ProjectList() {
             )}
 
             <CreateProjectDialog isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
+            {editingProject && (
+                <EditProjectDialog
+                    isOpen={true}
+                    onClose={() => setEditingProject(null)}
+                    project={editingProject}
+                />
+            )}
         </div>
     )
 }

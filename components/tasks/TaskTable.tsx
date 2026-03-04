@@ -14,6 +14,7 @@ import { useUserStore } from '@/stores/useUserStore'
 import { cn } from '@/lib/utils'
 import { Database } from '@/types/supabase'
 import { staggerContainer, staggerItem } from '@/lib/animations'
+import { ProjectIcon } from '@/components/ui/ProjectIcon'
 
 type Task = Database['public']['Tables']['tasks']['Row']
 
@@ -178,11 +179,7 @@ export function TaskTable() {
                                         <td className="px-6 py-4">
                                             {project ? (
                                                 <div className="flex items-center gap-2">
-                                                    <div
-                                                        className="w-2 h-2 rounded-full"
-                                                        style={{ backgroundColor: project.color }}
-                                                    />
-                                                    <span className="text-zinc-400">{project.name}</span>
+                                                    <ProjectIcon project={project} size="sm" /> <span className="text-zinc-400">{project.name}</span>
                                                 </div>
                                             ) : (
                                                 <span className="text-zinc-600 italic">-</span>
@@ -272,7 +269,7 @@ export function TaskTable() {
                                             </h4>
                                             {project && (
                                                 <div className="flex items-center gap-2 mt-1">
-                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: project.color }} />
+                                                    <ProjectIcon project={project} size="sm" />
                                                     <span className="text-xs text-zinc-400">{project.name}</span>
                                                 </div>
                                             )}
