@@ -51,14 +51,16 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
 
     // Populate form when task changes
     useEffect(() => {
-        const taskData = task as any
-        setTitle(taskData.title || '')
-        setDescription(taskData.description || '')
-        setPriority(taskData.priority || 'medium')
-        setStatus(taskData.status || 'todo')
-        setDueDate(taskData.due_date ? new Date(taskData.due_date).toISOString().split('T')[0] : '')
-        setSelectedProjectId(taskData.project_id || '')
-        setTotalDurationSeconds(taskData.total_duration || 0)
+        if (task && isOpen) {
+            const taskData = task as any
+            setTitle(taskData.title || '')
+            setDescription(taskData.description || '')
+            setPriority(taskData.priority || 'medium')
+            setStatus(taskData.status || 'todo')
+            setDueDate(taskData.due_date ? new Date(taskData.due_date).toISOString().split('T')[0] : '')
+            setSelectedProjectId(taskData.project_id || '')
+            setTotalDurationSeconds(taskData.total_duration || 0)
+        }
     }, [task, isOpen])
 
     // Close dropdowns when clicking outside

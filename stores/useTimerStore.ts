@@ -248,7 +248,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             if (entry) {
                 // Calculate initial duration using server time compensation
                 // Note: We use start_time which is a TIMESTAMPTZ from Postgres
-                const start = new Date(entry.start_time).getTime()
+                const start = new Date((entry as any).start_time).getTime()
                 const now = Date.now()
 
                 // If we want to be really precise, we should account for network latency
