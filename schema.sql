@@ -507,6 +507,17 @@ CREATE POLICY tasks_update ON tasks
         )
     );
 
+CREATE POLICY tasks_delete ON tasks
+    FOR DELETE USING (
+        EXISTS (
+            SELECT 1 FROM workspace_members wm
+            JOIN projects p ON p.workspace_id = wm.workspace_id
+            WHERE p.id = tasks.project_id
+            AND wm.user_id = auth.uid()
+            AND wm.role IN ('admin', 'member')
+        )
+    );
+
 -- Time Entries: Users can view their own and workspace members can view all
 CREATE POLICY time_entries_select ON time_entries
     FOR SELECT USING (

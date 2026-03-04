@@ -271,7 +271,13 @@ export const useTimerStore = create<TimerState>((set, get) => ({
     tick: () => {
         const { activeEntry, isPaused } = get()
         if (activeEntry && !isPaused) {
-            set((state) => ({ duration: state.duration + 1 }))
+            // Calculate actual elapsed time to prevent browser background throttling
+            // Using the same logic as fetchActiveTimer to maintain consistency
+            const start = new Date((activeEntry as any).start_time).getTime()
+            const now = Date.now()
+            const elapsed = Math.max(0, Math.floor((now - start) / 1000))
+
+            set({ duration: elapsed })
 
             // Update localStorage periodically
             if (typeof window !== 'undefined') {
