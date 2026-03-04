@@ -140,11 +140,11 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative w-full max-w-lg bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl shadow-black/80 z-10 overflow-hidden ring-1 ring-white/5"
+                        className="relative w-full max-w-lg bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl shadow-black/80 z-10 ring-1 ring-white/5"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none rounded-3xl" />
 
-                        <div className="relative p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                        <div className="relative p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02] rounded-t-3xl">
                             <h2 className="text-xl font-bold text-white tracking-tight">Edit Task</h2>
                             <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-zinc-400 hover:text-white transition-colors">
                                 <X size={20} />
