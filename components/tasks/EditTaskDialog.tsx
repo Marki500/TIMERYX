@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Calendar as CalendarIcon, Flag, Trash2, Tag } from 'lucide-react'
-import { useTaskStore } from '@/stores/useTaskStore'
+import { X, Calendar as CalendarIcon, Flag, Trash2, Tag, Clock } from 'lucide-react'
+import { useTaskStore, Task } from '@/stores/useTaskStore'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useUserStore } from '@/stores/useUserStore'
+import { useTimerStore } from '@/stores/useTimerStore'
 import { cn } from '@/lib/utils'
 import { Database } from '@/types/supabase'
-
-type Task = Database['public']['Tables']['tasks']['Row']
 
 interface EditTaskDialogProps {
     isOpen: boolean
@@ -30,6 +29,7 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
     const [status, setStatus] = useState<'backlog' | 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled'>('todo')
     const [dueDate, setDueDate] = useState('')
     const [selectedProjectId, setSelectedProjectId] = useState<string>('')
+    const [totalDurationSeconds, setTotalDurationSeconds] = useState(0)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [showPriorityDropdown, setShowPriorityDropdown] = useState(false)
@@ -51,14 +51,14 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
 
     // Populate form when task changes
     useEffect(() => {
-        if (task && isOpen) {
-            setTitle(task.title || '')
-            setDescription(task.description || '')
-            setPriority(task.priority || 'medium')
-            setStatus(task.status || 'todo')
-            setDueDate(task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : '')
-            setSelectedProjectId(task.project_id || '')
-        }
+        const taskData = task as any
+        setTitle(taskData.title || '')
+        setDescription(taskData.description || '')
+        setPriority(taskData.priority || 'medium')
+        setStatus(taskData.status || 'todo')
+        setDueDate(taskData.due_date ? new Date(taskData.due_date).toISOString().split('T')[0] : '')
+        setSelectedProjectId(taskData.project_id || '')
+        setTotalDurationSeconds(taskData.total_duration || 0)
     }, [task, isOpen])
 
     // Close dropdowns when clicking outside
@@ -89,6 +89,17 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
                 project_id: selectedProjectId || undefined,
                 due_date: dueDate ? new Date(dueDate).toISOString() : null,
             })
+
+            // If duration changed, add adjustment entry
+            const originalDuration = (task as any).total_duration || 0
+            if (totalDurationSeconds !== originalDuration) {
+                const diff = totalDurationSeconds - originalDuration
+                await useTimerStore.getState().addManualEntry(
+                    task.id,
+                    diff,
+                    new Date().toISOString().split('T')[0]
+                )
+            }
 
             onClose()
         } catch (error) {
@@ -312,6 +323,40 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
                                                     width: '140px'
                                                 }}
                                             />
+                                        </div>
+                                    </div>
+
+                                    {/* Total Duration Editing */}
+                                    <div className="relative">
+                                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 hover:border-white/20 hover:from-white/[0.12] hover:to-white/[0.04] text-sm font-medium transition-all backdrop-blur-sm">
+                                            <Clock size={14} className="text-zinc-400" />
+                                            <div className="flex items-center gap-1">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={Math.floor(totalDurationSeconds / 3600)}
+                                                    onChange={(e) => {
+                                                        const h = parseInt(e.target.value) || 0
+                                                        const m = Math.floor((totalDurationSeconds % 3600) / 60)
+                                                        setTotalDurationSeconds(h * 3600 + m * 60)
+                                                    }}
+                                                    className="bg-transparent text-zinc-300 text-sm outline-none w-8 text-center"
+                                                />
+                                                <span className="text-zinc-500">h</span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max="59"
+                                                    value={Math.floor((totalDurationSeconds % 3600) / 60)}
+                                                    onChange={(e) => {
+                                                        const h = Math.floor(totalDurationSeconds / 3600)
+                                                        const m = parseInt(e.target.value) || 0
+                                                        setTotalDurationSeconds(h * 3600 + m * 60)
+                                                    }}
+                                                    className="bg-transparent text-zinc-300 text-sm outline-none w-8 text-center"
+                                                />
+                                                <span className="text-zinc-500">m</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

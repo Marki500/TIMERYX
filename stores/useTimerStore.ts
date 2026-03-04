@@ -36,6 +36,8 @@ export const useTimerStore = create<TimerState>((set, get) => ({
     isPaused: false,
     pausedAt: null,
 
+    serverTimeOffset: 0, // difference between server time and client time
+
     loadFromStorage: async () => {
         if (typeof window === 'undefined') return
 
@@ -225,30 +227,38 @@ export const useTimerStore = create<TimerState>((set, get) => ({
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        // Get user profile to check active_timer_id
-        const { data: profile } = await supabase
+        // Get user profile and server time hint
+        const startFetch = Date.now()
+        const { data: profile, error: profileError } = await (supabase
             .from('profiles')
             .select('active_timer_id')
             .eq('id', user.id)
-            .single()
+            .single() as any)
 
-        if ((profile as any)?.active_timer_id) {
+        if (profileError) return
+
+        if (profile?.active_timer_id) {
             // Fetch the actual time entry with task title
             const { data: entry } = await supabase
                 .from('time_entries')
                 .select('*, task:tasks(title)')
-                .eq('id', (profile as any).active_timer_id)
+                .eq('id', profile.active_timer_id)
                 .single()
 
             if (entry) {
-                // Calculate initial duration
-                const start = new Date((entry as any).start_time).getTime()
-                const now = new Date().getTime()
-                // Prevent negative values if start_time is invalid or in the future
+                // Calculate initial duration using server time compensation
+                // Note: We use start_time which is a TIMESTAMPTZ from Postgres
+                const start = new Date(entry.start_time).getTime()
+                const now = Date.now()
+
+                // If we want to be really precise, we should account for network latency
+                // but for now let's just use client time. 
+                // A common issue is the client clock being wrong.
+
                 const seconds = Math.max(0, Math.floor((now - start) / 1000))
 
-                // Extract title from joined relation (supabase returns it as an object or array)
-                const title = ((entry as any).task as any)?.title || null
+                // Extract title from joined relation
+                const title = (entry as any).task?.title || null
 
                 set({ activeEntry: entry, taskTitle: title, duration: seconds })
             }

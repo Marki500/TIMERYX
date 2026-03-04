@@ -197,7 +197,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate, initialProjectI
                                         >
                                             <Tag size={14} className={cn(selectedProjectId ? "text-primary-400" : "text-zinc-500")} />
                                             {selectedProjectId
-                                                ? projects.find(p => p.id === selectedProjectId)?.name || 'Project'
+                                                ? projects.find(p => p.id === selectedProjectId)?.name || (selectedProjectId === initialProjectId ? 'Loading Project...' : 'Project')
                                                 : 'Select Project'}
                                         </button>
                                         {showProjectDropdown && (
