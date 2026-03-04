@@ -208,9 +208,9 @@ export function useDashboardData() {
         }
     }, [currentWorkspace, refreshTrigger, setWeeklyData, setRecentEntries, setProductivityStats, setIsLoading])
 
-    useEffect(() => {
-        fetchData()
-    }, [fetchData])
+    // We removed the automatic fetch on mount to prevent infinite loops 
+    // when components are unmounted/remounted by their own loading state.
+    // Fetching is now triggered explicitly by the main page.
 
     return { weeklyData, recentEntries, productivityStats, isLoading, refresh: fetchData }
 }

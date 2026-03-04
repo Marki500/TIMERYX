@@ -24,7 +24,7 @@ export default function DashboardPage() {
     const { tasks, fetchTasks, createTask, viewMode } = useTaskStore()
     const { currentWorkspace, profile } = useUserStore()
     const { projects, fetchProjects } = useProjectStore()
-    const { productivityStats } = useDashboardData()
+    const { productivityStats, refresh } = useDashboardData()
     const supabase = createClient()
 
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
@@ -35,8 +35,9 @@ export default function DashboardPage() {
         if (currentWorkspace) {
             fetchTasks()
             fetchProjects(currentWorkspace.id)
+            refresh() // Fetch dashboard stats/data
         }
-    }, [currentWorkspace])
+    }, [currentWorkspace, refresh, fetchTasks, fetchProjects])
 
     useEffect(() => {
         const hour = new Date().getHours()
