@@ -28,16 +28,17 @@ interface ProductivityStats {
 
 export function useDashboardData() {
     const { currentWorkspace } = useUserStore()
-    const { refreshTrigger } = useDashboardStore()
-    const [weeklyData, setWeeklyData] = useState<DayActivity[]>([])
-    const [recentEntries, setRecentEntries] = useState<RecentEntry[]>([])
-    const [productivityStats, setProductivityStats] = useState<ProductivityStats>({
-        currentStreak: 0,
-        averageDailyHours: 0,
-        mostProductiveDay: '-',
-        tasksCompletedThisWeek: 0
-    })
-    const [isLoading, setIsLoading] = useState(true)
+    const {
+        refreshTrigger,
+        weeklyData,
+        recentEntries,
+        productivityStats,
+        isLoading,
+        setWeeklyData,
+        setRecentEntries,
+        setProductivityStats,
+        setIsLoading
+    } = useDashboardStore()
 
     const fetchData = useCallback(async () => {
         if (!currentWorkspace) return
@@ -97,7 +98,7 @@ export function useDashboardData() {
 
                 // Create array for last 7 days
                 const today = new Date().getDay()
-                const weekData: DayActivity[] = []
+                const weekData: any[] = [] // Using any to match store's internal state if needed
                 let maxHours = 0
 
                 for (let i = 0; i < 7; i++) {
@@ -184,8 +185,8 @@ export function useDashboardData() {
                 // 3. Most Productive Day
                 const maxDay = weekData.reduce((max, day) =>
                     day.hours > max.hours ? day : max
-                    , weekData[0])
-                const mostProductiveDayName = dayNames[days.indexOf(maxDay.day)]
+                    , weekData[0] || { hours: 0 })
+                const mostProductiveDayName = dayNames[days.indexOf(maxDay.day)] || '-'
 
                 // 4. Tasks Completed This Week
                 const completedTasks = entries.filter((entry: any) => {
@@ -205,7 +206,7 @@ export function useDashboardData() {
         } finally {
             setIsLoading(false)
         }
-    }, [currentWorkspace, refreshTrigger])
+    }, [currentWorkspace, refreshTrigger, setWeeklyData, setRecentEntries, setProductivityStats, setIsLoading])
 
     useEffect(() => {
         fetchData()
