@@ -34,21 +34,17 @@ export function EditProjectDialog({ isOpen, onClose, project }: EditProjectDialo
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        const supabase = createClient()
+        const { updateProject } = useProjectStore.getState()
 
-        const { error } = await supabase
-            .from('projects')
-            .update({
-                name,
-                color,
-                budget_hours_monthly: Number(budget) || 0,
-                is_client_visible: isClientVisible,
-                url: url.trim() || null
-            } as any)
-            .eq('id', project.id)
+        const { error } = await updateProject(project.id, {
+            name,
+            color,
+            budget_hours_monthly: Number(budget) || 0,
+            is_client_visible: isClientVisible,
+            url: url.trim() || null
+        })
 
         if (!error) {
-            await fetchProjects(project.workspace_id)
             onClose()
         }
     }
