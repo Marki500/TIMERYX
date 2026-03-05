@@ -78,7 +78,7 @@ export function useDashboardData() {
                     .in('id', taskIds) as any)
 
                 // Create a map of task_id -> task
-                const taskMap = new Map(tasks?.map((t: any) => [t.id, t]) || [])
+                const taskMap = new Map(tasks?.map((t: any) => [t.id, t]) || []) as Map<string, any>
 
                 // Aggregate by day for weekly chart
                 const dayMap = new Map<string, number>()
@@ -190,8 +190,8 @@ export function useDashboardData() {
 
                 // 4. Tasks Completed This Week
                 const completedTasks = entries.filter((entry: any) => {
-                    const taskData = Array.isArray(entry.tasks) ? entry.tasks[0] : entry.tasks
-                    return taskData?.status === 'done'
+                    const task = entry.task_id ? taskMap.get(entry.task_id) : null;
+                    return task?.status === 'done';
                 }).length
 
                 setProductivityStats({

@@ -84,10 +84,10 @@ export default function AuthPage() {
     return (
         <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
             {/* Animated Background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#111111] to-[#1a0a2e]">
+            <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary-100/50 dark:to-primary-950/20">
                 {/* Floating Orbs */}
                 <motion.div
-                    className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl"
+                    className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/20 dark:bg-primary-500/10 rounded-full blur-3xl"
                     animate={{
                         x: [0, 30, 0],
                         y: [0, 20, 0],
@@ -99,7 +99,7 @@ export default function AuthPage() {
                     }}
                 />
                 <motion.div
-                    className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
+                    className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 dark:bg-blue-500/10 rounded-full blur-3xl"
                     animate={{
                         x: [0, -30, 0],
                         y: [0, -20, 0],
@@ -120,13 +120,13 @@ export default function AuthPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center mb-8"
                 >
-                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary-500/20 to-primary-600/20 backdrop-blur-xl border border-white/10 mb-6 shadow-2xl">
-                        <Clock className="w-10 h-10 text-primary-400" strokeWidth={1.5} />
+                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary-500/20 to-primary-600/20 backdrop-blur-xl border border-white/20 dark:border-white/10 mb-6 shadow-2xl">
+                        <Clock className="w-10 h-10 text-primary-500 dark:text-primary-400" strokeWidth={1.5} />
                     </div>
-                    <h1 className="text-6xl font-bold bg-gradient-to-r from-white via-primary-200 to-primary-400 bg-clip-text text-transparent mb-3 tracking-tight">
+                    <h1 className="text-6xl font-bold bg-gradient-to-r from-primary-800 via-primary-600 to-primary-400 dark:from-white dark:via-primary-200 dark:to-primary-400 bg-clip-text text-transparent mb-3 tracking-tight">
                         TIMERYX
                     </h1>
-                    <p className="text-zinc-400 text-lg font-light">
+                    <p className="text-muted-foreground text-lg font-light">
                         Track time. Manage projects. Stay productive.
                     </p>
                 </motion.div>
@@ -139,12 +139,12 @@ export default function AuthPage() {
                     className="relative"
                 >
                     {/* Glow Effect */}
-                    <div className="absolute -inset-1 bg-gradient-to-r from-primary-500/10 to-blue-500/10 rounded-3xl blur-lg" />
+                    <div className="absolute -inset-1 bg-gradient-to-r from-primary-500/20 to-blue-500/20 dark:from-primary-500/10 dark:to-blue-500/10 rounded-3xl blur-lg" />
 
                     {/* Main Card */}
-                    <div className="relative bg-[#0a0a0a]/80 backdrop-blur-xl p-8 rounded-3xl border border-white/10 shadow-2xl">
+                    <div className="glass relative p-8 rounded-3xl">
                         {/* Tabs with iOS Style */}
-                        <div className="flex gap-1 mb-8 p-1.5 bg-white/[0.05] rounded-2xl border border-white/10">
+                        <div className="flex gap-1 mb-8 p-1.5 bg-background/50 dark:bg-white/[0.05] rounded-2xl border border-border">
                             <button
                                 onClick={() => switchTab('login')}
                                 className="relative flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-300"
@@ -156,7 +156,7 @@ export default function AuthPage() {
                                         transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                     />
                                 )}
-                                <span className={`relative z-10 transition-colors ${activeTab === 'login' ? 'text-white' : 'text-zinc-400'
+                                <span className={`relative z-10 transition-colors ${activeTab === 'login' ? 'text-white' : 'text-muted-foreground'
                                     }`}>
                                     Sign In
                                 </span>
@@ -172,7 +172,7 @@ export default function AuthPage() {
                                         transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                     />
                                 )}
-                                <span className={`relative z-10 transition-colors ${activeTab === 'register' ? 'text-white' : 'text-zinc-400'
+                                <span className={`relative z-10 transition-colors ${activeTab === 'register' ? 'text-white' : 'text-muted-foreground'
                                     }`}>
                                     Sign Up
                                 </span>
@@ -193,7 +193,7 @@ export default function AuthPage() {
                                         <motion.div
                                             initial={{ opacity: 0, y: -10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="bg-red-500/10 backdrop-blur-xl border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm"
+                                            className="bg-danger-500/10 backdrop-blur-xl border border-danger-500/20 text-danger-700 dark:text-danger-400 px-4 py-3 rounded-xl text-sm"
                                         >
                                             {error}
                                         </motion.div>
@@ -201,7 +201,7 @@ export default function AuthPage() {
 
                                     {activeTab === 'register' && (
                                         <div>
-                                            <label htmlFor="fullName" className="block text-sm font-medium mb-2 text-zinc-300">
+                                            <label htmlFor="fullName" className="block text-sm font-medium mb-2 text-foreground">
                                                 Full Name
                                             </label>
                                             <input
@@ -210,14 +210,14 @@ export default function AuthPage() {
                                                 value={fullName}
                                                 onChange={(e) => setFullName(e.target.value)}
                                                 required
-                                                className="w-full px-4 py-3.5 bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all text-white placeholder:text-zinc-500"
+                                                className="w-full px-4 py-3.5 bg-background/50 dark:bg-white/[0.05] backdrop-blur-xl border border-border dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all text-foreground placeholder:text-muted-foreground/50"
                                                 placeholder="John Doe"
                                             />
                                         </div>
                                     )}
 
                                     <div>
-                                        <label htmlFor="email" className="block text-sm font-medium mb-2 text-zinc-300">
+                                        <label htmlFor="email" className="block text-sm font-medium mb-2 text-foreground">
                                             Email
                                         </label>
                                         <input
@@ -226,13 +226,13 @@ export default function AuthPage() {
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
                                             required
-                                            className="w-full px-4 py-3.5 bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all text-white placeholder:text-zinc-500"
+                                            className="w-full px-4 py-3.5 bg-background/50 dark:bg-white/[0.05] backdrop-blur-xl border border-border dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all text-foreground placeholder:text-muted-foreground/50"
                                             placeholder="you@example.com"
                                         />
                                     </div>
 
                                     <div>
-                                        <label htmlFor="password" className="block text-sm font-medium mb-2 text-zinc-300">
+                                        <label htmlFor="password" className="block text-sm font-medium mb-2 text-foreground">
                                             Password
                                         </label>
                                         <input
@@ -242,11 +242,11 @@ export default function AuthPage() {
                                             onChange={(e) => setPassword(e.target.value)}
                                             required
                                             minLength={6}
-                                            className="w-full px-4 py-3.5 bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all text-white placeholder:text-zinc-500"
+                                            className="w-full px-4 py-3.5 bg-background/50 dark:bg-white/[0.05] backdrop-blur-xl border border-border dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all text-foreground placeholder:text-muted-foreground/50"
                                             placeholder="••••••••"
                                         />
                                         {activeTab === 'register' && (
-                                            <p className="text-xs text-zinc-500 mt-2">
+                                            <p className="text-xs text-muted-foreground mt-2">
                                                 Must be at least 6 characters
                                             </p>
                                         )}
@@ -286,7 +286,7 @@ export default function AuthPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
-                    className="text-center text-xs text-zinc-500 mt-8"
+                    className="text-center text-xs text-muted-foreground mt-8"
                 >
                     By continuing, you agree to our Terms of Service and Privacy Policy
                 </motion.p>
