@@ -357,8 +357,12 @@ export function TaskTable() {
                 onCancel={() => setDeletingTaskId(null)}
                 onConfirm={async () => {
                     if (deletingTaskId) {
-                        await useTaskStore.getState().deleteTask(deletingTaskId)
-                        setDeletingTaskId(null)
+                        try {
+                            await useTaskStore.getState().deleteTask(deletingTaskId)
+                            setDeletingTaskId(null)
+                        } catch (error: any) {
+                            alert(error.message)
+                        }
                     }
                 }}
                 title="Delete Task"

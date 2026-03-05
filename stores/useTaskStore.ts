@@ -167,19 +167,21 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         }))
 
         const supabase = createClient()
-        const { error } = await (supabase
+        const { data, error } = await (supabase
             .from('tasks') as any)
             .delete()
             .eq('id', id)
+            .select()
 
-        if (error) {
-            console.error('Error deleting task:', error)
+        if (error || !data || data.length === 0) {
+            console.error('Error deleting task:', error || 'No rows deleted (RLS or not found)')
             // Rollback optimistic update
             if (taskToDelete) {
                 set((state) => ({
                     tasks: [...state.tasks, taskToDelete]
                 }))
             }
+            throw new Error(error?.message || 'No tienes permisos para borrar esta tarea o ya no existe.')
         }
     }
 }))

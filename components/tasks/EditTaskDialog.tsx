@@ -114,8 +114,9 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
         try {
             await deleteTask(task.id)
             onClose()
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to delete task:', error)
+            alert(error.message)
         } finally {
             setIsSubmitting(false)
             setShowDeleteConfirm(false)
