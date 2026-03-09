@@ -96,7 +96,7 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
             // If duration changed, replace time entries with the new total
             const originalDuration = (task as any).total_duration || 0
             if (totalDurationSeconds !== originalDuration) {
-                await useTimerStore.getState().setTaskDuration(task.id, totalDurationSeconds)
+                await useTimerStore.getState().setTaskDuration(task.id, totalDurationSeconds, dueDate)
             }
 
             onClose()

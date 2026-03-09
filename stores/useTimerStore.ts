@@ -24,7 +24,7 @@ interface TimerState {
     tick: () => void
     loadFromStorage: () => void
     addManualEntry: (taskId: string, durationSeconds: number, date: string) => Promise<void>
-    setTaskDuration: (taskId: string, newTotalSeconds: number) => Promise<void>
+    setTaskDuration: (taskId: string, newTotalSeconds: number, targetDate?: string) => Promise<void>
 }
 
 const STORAGE_KEY = 'timeryx_active_timer'
@@ -323,12 +323,13 @@ export const useTimerStore = create<TimerState>((set, get) => ({
         useDashboardStore.getState().triggerRefresh()
     },
 
-    setTaskDuration: async (taskId, newTotalSeconds) => {
+    setTaskDuration: async (taskId, newTotalSeconds, targetDate) => {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('Not authenticated')
 
         // 1. Fetch all existing time entries for this task to compute current total
+        // Also fetch the task to get its created_at as a fallback
         const { data: entries, error: fetchError } = await (supabase
             .from('time_entries') as any)
             .select('*')
@@ -357,8 +358,27 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
         if (diff > 0) {
             // ADDING TIME: create a new manual entry with the positive diff
-            const startTime = new Date()
-            startTime.setHours(12, 0, 0, 0)
+            let startTime: Date
+
+            if (targetDate) {
+                // If a targetDate is provided (e.g. "2024-03-05"), use it at noon
+                startTime = new Date(targetDate + 'T12:00:00')
+            } else {
+                // Fallback: get the task's created_at to attribute time to the task's day
+                const { data: task } = await (supabase
+                    .from('tasks') as any)
+                    .select('created_at')
+                    .eq('id', taskId)
+                    .single()
+
+                if (task?.created_at) {
+                    startTime = new Date(task.created_at)
+                } else {
+                    startTime = new Date()
+                    startTime.setHours(12, 0, 0, 0)
+                }
+            }
+
             const endTime = new Date(startTime.getTime() + diff * 1000)
 
             const { error: insertError } = await (supabase.rpc as any)('add_manual_time_entry', {

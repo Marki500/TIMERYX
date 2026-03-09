@@ -50,17 +50,20 @@ export function useDashboardData() {
         try {
             setIsLoading(true)
 
-            // Fetch time entries from the last 7 days
-            const sevenDaysAgo = new Date()
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
+            // Fetch time entries for the current week (starting Monday)
+            const todayDate = new Date()
+            const dayOfWeek = todayDate.getDay() // 0 = Sunday, 1 = Monday...
+            const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+            const startOfWeek = new Date(todayDate)
+            startOfWeek.setDate(todayDate.getDate() - daysSinceMonday)
+            startOfWeek.setHours(0, 0, 0, 0)
 
             // Fetch time entries
             const { data: entries, error: entriesError } = await (supabase
                 .from('time_entries')
                 .select('*')
                 .eq('user_id', user.id)
-                .gte('start_time', sevenDaysAgo.toISOString())
+                .gte('start_time', startOfWeek.toISOString())
                 .order('start_time', { ascending: false }) as any)
 
             if (entriesError) {
@@ -80,14 +83,14 @@ export function useDashboardData() {
                 // Create a map of task_id -> task
                 const taskMap = new Map(tasks?.map((t: any) => [t.id, t]) || []) as Map<string, any>
 
-                // Aggregate by day for weekly chart
+                // Aggregate by day for weekly chart (Monday to Sunday)
                 const dayMap = new Map<string, number>()
-                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-                const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+                const jsDayToChartDay = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+                const chartDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
                 entries.forEach((entry: any) => {
                     const date = new Date(entry.start_time)
-                    const dayName = days[date.getDay()]
+                    const dayName = jsDayToChartDay[date.getDay()]
                     // Calculate duration from start_time and end_time
                     const duration = entry.end_time
                         ? (new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / 1000
@@ -96,14 +99,10 @@ export function useDashboardData() {
                     dayMap.set(dayName, (dayMap.get(dayName) || 0) + hours)
                 })
 
-                // Create array for last 7 days
-                const today = new Date().getDay()
                 const weekData: any[] = [] // Using any to match store's internal state if needed
                 let maxHours = 0
 
-                for (let i = 0; i < 7; i++) {
-                    const dayIndex = (today - 6 + i + 7) % 7
-                    const dayName = days[dayIndex]
+                for (const dayName of chartDays) {
                     const hours = dayMap.get(dayName) || 0
                     maxHours = Math.max(maxHours, hours)
                     weekData.push({
@@ -178,15 +177,21 @@ export function useDashboardData() {
                     }
                 }
 
-                // 2. Average Daily Hours (last 7 days)
+                // 2. Average Daily Hours (this week up to today)
                 const totalHours = weekData.reduce((sum, day) => sum + day.hours, 0)
-                const avgHours = totalHours / 7
+                const daysElapsedThisWeek = daysSinceMonday + 1
+                const avgHours = totalHours / Math.max(1, daysElapsedThisWeek) // Avoid division by zero
 
                 // 3. Most Productive Day
                 const maxDay = weekData.reduce((max, day) =>
                     day.hours > max.hours ? day : max
                     , weekData[0] || { hours: 0 })
-                const mostProductiveDayName = dayNames[days.indexOf(maxDay.day)] || '-'
+
+                const fullDayNames: Record<string, string> = {
+                    'Lun': 'Lunes', 'Mar': 'Martes', 'Mié': 'Miércoles',
+                    'Jue': 'Jueves', 'Vie': 'Viernes', 'Sáb': 'Sábado', 'Dom': 'Domingo'
+                }
+                const mostProductiveDayName = maxDay.hours > 0 ? fullDayNames[maxDay.day] : '-'
 
                 // 4. Tasks Completed This Week
                 const completedTasks = entries.filter((entry: any) => {

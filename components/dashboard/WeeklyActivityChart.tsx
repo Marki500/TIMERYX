@@ -23,8 +23,8 @@ export function WeeklyActivityChart() {
         <div className="h-full flex flex-col p-6 rounded-3xl bg-black/20 border border-white/5 backdrop-blur-md">
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h3 className="text-lg font-bold text-white">Weekly Activity</h3>
-                    <p className="text-sm text-zinc-400">Total time spent this week</p>
+                    <h3 className="text-lg font-bold text-white">Actividad de la Semana</h3>
+                    <p className="text-sm text-zinc-400">Tiempo total dedicado esta semana</p>
                 </div>
                 <div className="text-right">
                     <div className="text-2xl font-bold text-white font-mono">
@@ -38,9 +38,16 @@ export function WeeklyActivityChart() {
                 {weeklyData.map((item, index) => (
                     <div key={item.day} className="flex flex-col items-center gap-3 flex-1 h-full justify-end group">
                         <div className="relative w-full h-full flex items-end justify-center">
+                            {/* Always visible label for non-zero values above bar */}
+                            {item.hours > 0 && (
+                                <div className="absolute -top-5 text-zinc-400/80 text-[11px] font-bold z-10 pointer-events-none group-hover:opacity-0 transition-opacity">
+                                    {Math.round(item.hours * 10) / 10}h
+                                </div>
+                            )}
+
                             {/* Tooltip */}
-                            <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-black text-xs font-bold py-1 px-2 rounded-lg whitespace-nowrap z-10 pointer-events-none mb-2">
-                                {item.hours.toFixed(1)}h
+                            <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-black text-xs font-bold py-1 px-2 rounded-lg whitespace-nowrap z-10 pointer-events-none mb-2 shadow-xl shadow-black/50">
+                                {Math.floor(item.hours)}h {Math.round((item.hours % 1) * 60)}m
                             </div>
 
                             {/* Bar */}
