@@ -8,6 +8,7 @@ import { useProjectStore } from '@/stores/useProjectStore'
 import { ToastContainer } from '@/components/ui/ToastContainer'
 import { FloatingDock } from '@/components/layout/FloatingDock'
 import { ActiveTimer } from '@/components/timer/ActiveTimer'
+import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog'
 
 export function DashboardClientProvider({
     children,
@@ -60,6 +61,9 @@ export function DashboardClientProvider({
 
             {/* Floating Active Timer */}
             <ActiveTimer />
+
+            {/* Global Modals */}
+            <CreateTaskDialog />
 
             {/* Toast Notifications */}
             <ToastContainer />

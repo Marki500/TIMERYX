@@ -16,11 +16,13 @@ import {
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useTaskStore } from '@/stores/useTaskStore'
 
 export function FloatingDock() {
     const pathname = usePathname()
     const router = useRouter()
     const supabase = createClient()
+    const { openCreateModal } = useTaskStore()
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
     const [hoveredLogout, setHoveredLogout] = useState(false)
 
@@ -141,7 +143,7 @@ export function FloatingDock() {
                 {/* Create Action */}
                 <button
                     className="flex items-center justify-center rounded-xl lg:rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 text-white shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50 hover:scale-105 active:scale-95 transition-all w-12 h-12 lg:w-14 lg:h-14"
-                    onClick={() => document.getElementById('create-task-trigger')?.click()}
+                    onClick={() => openCreateModal()}
                 >
                     <Plus size={24} className="lg:w-7 lg:h-7" />
                 </button>

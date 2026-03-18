@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Calendar as CalendarIcon, Flag, Tag, Clock } from 'lucide-react'
+import { X, Calendar as CalendarIcon, Flag, Tag, Clock, Plus, Check } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useProjectStore } from '@/stores/useProjectStore'
@@ -11,13 +11,19 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
 interface CreateTaskDialogProps {
-    isOpen: boolean
-    onClose: () => void
+    isOpen?: boolean
+    onClose?: () => void
     initialDate?: Date | null
     initialProjectId?: string
 }
 
-export function CreateTaskDialog({ isOpen, onClose, initialDate, initialProjectId }: CreateTaskDialogProps) {
+export function CreateTaskDialog(props: CreateTaskDialogProps) {
+    const store = useTaskStore()
+    const isOpen = props.isOpen !== undefined ? props.isOpen : store.isCreateModalOpen
+    const onClose = props.onClose || store.closeCreateModal
+    const initialDate = props.initialDate !== undefined ? props.initialDate : store.createModalInitialDate
+    const initialProjectId = props.initialProjectId !== undefined ? props.initialProjectId : store.createModalInitialProjectId
+
     const { createTask } = useTaskStore()
     const { currentWorkspace } = useUserStore()
     const { projects, fetchProjects } = useProjectStore() // Use project store
@@ -28,6 +34,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate, initialProjectI
     const [description, setDescription] = useState('')
     const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium')
     const [status, setStatus] = useState<'backlog' | 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled'>('todo')
+    const [subtasks, setSubtasks] = useState<{ id: string; text: string; isCompleted: boolean }[]>([])
     const [dueDate, setDueDate] = useState('')
     const [selectedProjectId, setSelectedProjectId] = useState<string>('') // New state
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -44,7 +51,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate, initialProjectI
         if (isOpen && initialDate) {
             setDueDate(initialDate.toISOString().split('T')[0])
         } else if (isOpen && !initialDate) {
-            setDueDate('')
+            setDueDate(new Date().toISOString().split('T')[0])
         }
 
         // Contextual project pre-selection
@@ -113,9 +120,13 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate, initialProjectI
                 }
             }
 
+            const finalDesc = subtasks.length > 0
+                ? `${description}\n\n---SUBTASKS---\n${subtasks.map(st => `- [${st.isCompleted ? 'x' : ' '}] ${st.text}`).join('\n')}`
+                : description
+
             await createTask({
                 title,
-                description,
+                description: finalDesc,
                 priority,
                 status,
                 project_id: finalProjectId,
@@ -181,6 +192,61 @@ export function CreateTaskDialog({ isOpen, onClose, initialDate, initialProjectI
                                         onChange={(e) => setDescription(e.target.value)}
                                         className="w-full bg-transparent text-zinc-400 placeholder-zinc-600 focus:outline-none resize-none min-h-[80px]"
                                     />
+                                </div>
+
+                                {/* Subtasks UI */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-zinc-400">
+                                        <span className="text-sm font-medium">Subtasks</span>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setSubtasks([...subtasks, { id: Date.now().toString(), text: '', isCompleted: false }])}
+                                            className="text-xs flex items-center gap-1 hover:text-white transition-colors"
+                                        >
+                                            <Plus size={14} /> Add Subtask
+                                        </button>
+                                    </div>
+                                    {subtasks.length > 0 && (
+                                        <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                            {subtasks.map((st, i) => (
+                                                <div key={st.id} className="flex items-start gap-2 group">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newSt = [...subtasks]
+                                                            newSt[i].isCompleted = !newSt[i].isCompleted
+                                                            setSubtasks(newSt)
+                                                        }}
+                                                        className={cn("mt-1 shrink-0 w-4 h-4 rounded-sm border flex items-center justify-center transition-colors",
+                                                            st.isCompleted ? "bg-primary-500 border-primary-500 text-white" : "border-zinc-600 hover:border-zinc-400"
+                                                        )}
+                                                    >
+                                                        {st.isCompleted && <Check size={12} strokeWidth={3} />}
+                                                    </button>
+                                                    <input
+                                                        type="text"
+                                                        value={st.text}
+                                                        onChange={(e) => {
+                                                            const newSt = [...subtasks]
+                                                            newSt[i].text = e.target.value
+                                                            setSubtasks(newSt)
+                                                        }}
+                                                        placeholder="Subtask description..."
+                                                        className={cn("flex-1 bg-transparent text-sm focus:outline-none transition-colors",
+                                                            st.isCompleted ? "text-zinc-500 line-through" : "text-zinc-300"
+                                                        )}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSubtasks(subtasks.filter((_, idx) => idx !== i))}
+                                                        className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 transition-all p-1"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex flex-wrap gap-3 pt-2">

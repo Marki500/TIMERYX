@@ -16,6 +16,7 @@ import { useTaskStore } from '@/stores/useTaskStore'
 
 export function MobileNav() {
     const pathname = usePathname()
+    const { openCreateModal } = useTaskStore()
     // We can trigger "New Task" directly from here too if we want
     // But for now let's keep it simple navigation
 
@@ -66,7 +67,7 @@ export function MobileNav() {
 
                 <button
                     className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-600 text-white shadow-lg shadow-primary-500/30 active:scale-95 transition-transform"
-                    onClick={() => document.getElementById('create-task-trigger')?.click()}
+                    onClick={() => openCreateModal()}
                 >
                     <Plus size={24} />
                 </button>

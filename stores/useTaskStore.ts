@@ -21,6 +21,13 @@ interface TaskState {
     createTask: (task: Partial<Task>) => Promise<Task | null>
     updateTask: (id: string, updates: Partial<Task>) => Promise<void>
     deleteTask: (id: string) => Promise<void>
+
+    // Global Create Modal Actions
+    isCreateModalOpen: boolean
+    createModalInitialDate: Date | null
+    createModalInitialProjectId: string | undefined
+    openCreateModal: (initialDate?: Date | null, initialProjectId?: string) => void
+    closeCreateModal: () => void
 }
 
 export const useTaskStore = create<TaskState>((set, get) => ({
@@ -29,6 +36,22 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     viewMode: 'table',
     filterStatus: 'all',
     currentProjectId: null,
+
+    isCreateModalOpen: false,
+    createModalInitialDate: null,
+    createModalInitialProjectId: undefined,
+
+    openCreateModal: (initialDate = null, initialProjectId = undefined) => set({
+        isCreateModalOpen: true,
+        createModalInitialDate: initialDate,
+        createModalInitialProjectId: initialProjectId
+    }),
+
+    closeCreateModal: () => set({
+        isCreateModalOpen: false,
+        createModalInitialDate: null,
+        createModalInitialProjectId: undefined
+    }),
 
     setViewMode: (mode) => set({ viewMode: mode }),
 

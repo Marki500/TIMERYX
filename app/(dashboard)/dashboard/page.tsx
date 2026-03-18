@@ -21,14 +21,12 @@ import { useDashboardData } from '@/hooks/useDashboardData'
 import { Suspense } from 'react'
 
 export default function DashboardPage() {
-    const { tasks, fetchTasks, createTask, viewMode } = useTaskStore()
+    const { tasks, fetchTasks, createTask, viewMode, openCreateModal } = useTaskStore()
     const { currentWorkspace, profile } = useUserStore()
     const { projects, fetchProjects } = useProjectStore()
     const { productivityStats, refresh } = useDashboardData()
     const supabase = createClient()
 
-    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null)
     const [greeting, setGreeting] = useState('Buenos días')
 
     useEffect(() => {
@@ -60,13 +58,7 @@ export default function DashboardPage() {
     const highPriorityTasks = tasks.filter(t => t.priority === 'high' && t.status !== 'done').length
 
     const handleDateClick = (date: Date) => {
-        setSelectedDate(date)
-        setIsTaskModalOpen(true)
-    }
-
-    const handleCloseModal = () => {
-        setIsTaskModalOpen(false)
-        setSelectedDate(null)
+        openCreateModal(date)
     }
 
     return (
@@ -85,19 +77,13 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => setIsTaskModalOpen(true)}
+                        onClick={() => openCreateModal()}
                         className="px-6 py-3 bg-white text-black font-bold rounded-full hover:bg-zinc-200 transition-all hover:scale-105 shadow-xl shadow-white/5 active:scale-95"
                     >
                         + Nueva Tarea
                     </button>
                 </div>
             </div>
-
-            <CreateTaskDialog
-                isOpen={isTaskModalOpen}
-                onClose={handleCloseModal}
-                initialDate={selectedDate}
-            />
 
             {/* Main Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

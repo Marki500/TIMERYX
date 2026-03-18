@@ -6,7 +6,6 @@ import { MoreHorizontal, Play, CheckCircle2, Circle, AlertCircle, Edit2, Trash2,
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useTimerStore } from '@/stores/useTimerStore'
 import { EditTaskDialog } from './EditTaskDialog'
-import { CreateTaskDialog } from './CreateTaskDialog'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ManualTimeDialog } from '@/components/timer/ManualTimeDialog'
 import { useProjectStore } from '@/stores/useProjectStore'
@@ -26,7 +25,6 @@ export function TaskTable() {
     const [editingTask, setEditingTask] = useState<Task | null>(null)
     const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
     const [manualTimeTaskId, setManualTimeTaskId] = useState<string | null>(null)
-    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
     const [searchQuery, setSearchQuery] = useState('')
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
@@ -77,19 +75,12 @@ export function TaskTable() {
                 <div className="flex flex-col items-center justify-center h-64 border border-dashed border-white/10 rounded-3xl bg-white/[0.02]">
                     <p className="text-zinc-500 mb-4">No tasks found</p>
                     <button
-                        onClick={() => setIsCreateDialogOpen(true)}
+                        onClick={() => useTaskStore.getState().openCreateModal()}
                         className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-500 transition-colors"
                     >
                         Create your first task
                     </button>
                 </div>
-
-                <CreateTaskDialog
-                    isOpen={isCreateDialogOpen}
-                    onClose={() => setIsCreateDialogOpen(false)}
-                    initialDate={null}
-                    initialProjectId={undefined}
-                />
             </>
         )
     }
