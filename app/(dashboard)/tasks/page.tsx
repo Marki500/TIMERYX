@@ -5,12 +5,10 @@ import { Plus } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { TaskTable } from '@/components/tasks/TaskTable'
-import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog'
 
 export default function TasksPage() {
-    const { fetchTasks } = useTaskStore()
+    const { fetchTasks, openCreateModal } = useTaskStore()
     const { currentWorkspace } = useUserStore()
-    const [isCreateOpen, setIsCreateOpen] = useState(false)
 
     useEffect(() => {
         if (currentWorkspace) {
@@ -26,7 +24,7 @@ export default function TasksPage() {
                     <p className="text-zinc-400">Manage all your tasks across projects</p>
                 </div>
                 <button
-                    onClick={() => setIsCreateOpen(true)}
+                    onClick={() => openCreateModal()}
                     className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors"
                 >
                     <Plus size={18} />
@@ -35,11 +33,6 @@ export default function TasksPage() {
             </div>
 
             <TaskTable />
-
-            <CreateTaskDialog
-                isOpen={isCreateOpen}
-                onClose={() => setIsCreateOpen(false)}
-            />
         </div>
     )
 }

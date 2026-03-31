@@ -21,6 +21,13 @@ interface TaskState {
     createTask: (task: Partial<Task>) => Promise<Task | null>
     updateTask: (id: string, updates: Partial<Task>) => Promise<void>
     deleteTask: (id: string) => Promise<void>
+
+    // Global Create Modal Actions
+    isCreateModalOpen: boolean
+    createModalInitialDate: Date | null
+    createModalInitialProjectId: string | undefined
+    openCreateModal: (initialDate?: Date | null, initialProjectId?: string) => void
+    closeCreateModal: () => void
 }
 
 export const useTaskStore = create<TaskState>((set, get) => ({
@@ -29,6 +36,22 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     viewMode: 'table',
     filterStatus: 'all',
     currentProjectId: null,
+
+    isCreateModalOpen: false,
+    createModalInitialDate: null,
+    createModalInitialProjectId: undefined,
+
+    openCreateModal: (initialDate = null, initialProjectId = undefined) => set({
+        isCreateModalOpen: true,
+        createModalInitialDate: initialDate,
+        createModalInitialProjectId: initialProjectId
+    }),
+
+    closeCreateModal: () => set({
+        isCreateModalOpen: false,
+        createModalInitialDate: null,
+        createModalInitialProjectId: undefined
+    }),
 
     setViewMode: (mode) => set({ viewMode: mode }),
 
@@ -55,6 +78,29 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
         if (!user) return null
 
+        // OPTIMISTIC UPDATE
+        const tempId = `temp-${Date.now()}`
+        const optimisticTask: Task = {
+            ...task,
+            id: tempId,
+            created_by: user.id,
+            status: task.status || 'todo',
+            priority: task.priority || 'medium',
+            title: task.title || 'New Task',
+            description: task.description || null,
+            project_id: task.project_id || null,
+            assigned_to: task.assigned_to || null,
+            due_date: task.due_date || null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            total_duration: 0
+        } as Task
+
+        const currentProjectId = get().currentProjectId
+        if (!currentProjectId || optimisticTask.project_id === currentProjectId) {
+            set((state) => ({ tasks: [optimisticTask, ...state.tasks] }))
+        }
+
         const { data, error } = await (supabase
             .from('tasks') as any)
             .insert({
@@ -66,16 +112,15 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
         if (error) {
             console.error('Error creating task:', error)
+            // Rollback optimistic update
+            set((state) => ({ tasks: state.tasks.filter(t => t.id !== tempId) }))
             return null
         }
 
-        // Only add to local state if:
-        // 1. No filter is active (Dashboard) OR
-        // 2. Task belongs to current project filter
-        const currentProjectId = get().currentProjectId
-        if (!currentProjectId || data.project_id === currentProjectId) {
-            set((state) => ({ tasks: [data, ...state.tasks] }))
-        }
+        // Replace optimistic task with real task
+        set((state) => ({
+            tasks: state.tasks.map(t => t.id === tempId ? { ...data, total_duration: 0 } : t)
+        }))
 
         // Check for assignment trigger
         if (data.assigned_to && data.assigned_to !== user.id) {
@@ -136,16 +181,30 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     },
 
     deleteTask: async (id) => {
+        // Find task for potential rollback
+        const taskToDelete = get().tasks.find(t => t.id === id)
+
+        // Optimistic update
         set((state) => ({
             tasks: state.tasks.filter(t => t.id !== id)
         }))
 
         const supabase = createClient()
-        const { error } = await (supabase
+        const { data, error } = await (supabase
             .from('tasks') as any)
             .delete()
             .eq('id', id)
+            .select()
 
-        if (error) console.error('Error deleting task:', error)
+        if (error || !data || data.length === 0) {
+            console.error('Error deleting task:', error || 'No rows deleted (RLS or not found)')
+            // Rollback optimistic update
+            if (taskToDelete) {
+                set((state) => ({
+                    tasks: [...state.tasks, taskToDelete]
+                }))
+            }
+            throw new Error(error?.message || 'No tienes permisos para borrar esta tarea o ya no existe.')
+        }
     }
 }))

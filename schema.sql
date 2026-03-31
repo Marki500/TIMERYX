@@ -25,6 +25,7 @@ CREATE TABLE profiles (
     email TEXT UNIQUE NOT NULL,
     full_name TEXT,
     avatar_url TEXT,
+    phone TEXT UNIQUE, -- WhatsApp phone number
     active_timer_id UUID, -- FK to time_entries, ensures only ONE active timer
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -497,6 +498,17 @@ CREATE POLICY tasks_insert ON tasks
 
 CREATE POLICY tasks_update ON tasks
     FOR UPDATE USING (
+        EXISTS (
+            SELECT 1 FROM workspace_members wm
+            JOIN projects p ON p.workspace_id = wm.workspace_id
+            WHERE p.id = tasks.project_id
+            AND wm.user_id = auth.uid()
+            AND wm.role IN ('admin', 'member')
+        )
+    );
+
+CREATE POLICY tasks_delete ON tasks
+    FOR DELETE USING (
         EXISTS (
             SELECT 1 FROM workspace_members wm
             JOIN projects p ON p.workspace_id = wm.workspace_id

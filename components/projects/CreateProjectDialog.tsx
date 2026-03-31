@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Globe } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useUserStore } from '@/stores/useUserStore'
@@ -30,6 +30,7 @@ export function CreateProjectDialog({ isOpen, onClose }: CreateProjectDialogProp
     const [name, setName] = useState('')
     const [color, setColor] = useState(COLORS[5]) // Default blue
     const [budget, setBudget] = useState('')
+    const [url, setUrl] = useState('')
     const [isClientVisible, setIsClientVisible] = useState(true)
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -41,13 +42,15 @@ export function CreateProjectDialog({ isOpen, onClose }: CreateProjectDialogProp
             name,
             color,
             budget_hours_monthly: Number(budget) || 0,
-            is_client_visible: isClientVisible
-        })
+            is_client_visible: isClientVisible,
+            url: url.trim() || null
+        } as any)
 
         if (!error) {
             onClose()
             setName('')
             setBudget('')
+            setUrl('')
         }
     }
 
@@ -102,6 +105,29 @@ export function CreateProjectDialog({ isOpen, onClose }: CreateProjectDialogProp
                                         style={{ backgroundColor: c }}
                                     />
                                 ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-400 mb-1">Website URL (for favicon)</label>
+                            <div className="flex items-center gap-3">
+                                {url.trim() ? (
+                                    <img
+                                        src={`https://www.google.com/s2/favicons?domain=${url.trim()}&sz=32`}
+                                        alt="favicon"
+                                        className="w-6 h-6 rounded"
+                                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                    />
+                                ) : (
+                                    <Globe className="w-6 h-6 text-zinc-600" />
+                                )}
+                                <input
+                                    type="text"
+                                    value={url}
+                                    onChange={(e) => setUrl(e.target.value)}
+                                    className="flex-1 bg-zinc-900 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+                                    placeholder="e.g. google.com"
+                                />
                             </div>
                         </div>
 

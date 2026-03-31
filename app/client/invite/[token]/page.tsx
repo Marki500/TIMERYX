@@ -173,16 +173,15 @@ export default function ClientInvitePage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#111111] to-[#1a0a2e] flex items-center justify-center p-4">
             {/* Animated Background */}
-            <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <motion.div
-                    className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/20 rounded-full blur-[120px]"
+                    className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl opacity-50"
                     animate={{
-                        x: [0, 50, 0],
-                        y: [0, 30, 0],
-                        scale: [1, 1.1, 1],
+                        x: [0, 30, 0],
+                        y: [0, 20, 0],
                     }}
                     transition={{
-                        duration: 8,
+                        duration: 10,
                         repeat: Infinity,
                         ease: "easeInOut"
                     }}
@@ -193,7 +192,7 @@ export default function ClientInvitePage() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl"
+                    className="bg-[#0a0a0a]/80 backdrop-blur-lg border border-white/10 rounded-3xl p-8 shadow-2xl"
                 >
                     {!showRegister ? (
                         <>

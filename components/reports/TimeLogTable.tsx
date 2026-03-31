@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDuration } from '@/lib/utils'
 import { format } from 'date-fns'
 import { Download, FileText } from 'lucide-react'
-import { exportToCSV, exportToPDF } from '@/lib/export'
+import { exportToCSV, exportToPDF, exportMonthlyProjectPDF } from '@/lib/export'
 
 interface TimeEntryLog {
     id: string
@@ -135,6 +135,11 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
         exportToPDF(entries, filename)
     }
 
+    const handleExportMonthlyProjectPDF = () => {
+        const filename = `timeryx_resumen_proyectos_${format(new Date(), 'yyyy-MM-dd')}.pdf`
+        exportMonthlyProjectPDF(entries, filename)
+    }
+
     return (
         <div className="space-y-4">
             {/* Export Buttons */}
@@ -156,6 +161,13 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
                     >
                         <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
                         <span className="font-medium">Exportar PDF</span>
+                    </button>
+                    <button
+                        onClick={handleExportMonthlyProjectPDF}
+                        className="px-4 py-2 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 hover:from-indigo-500/20 hover:to-purple-500/20 hover:border-indigo-500/30 transition-all flex items-center gap-2 group"
+                    >
+                        <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        <span className="font-medium">Resumen Proyectos (PDF)</span>
                     </button>
                 </div>
             </div>

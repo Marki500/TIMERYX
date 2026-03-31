@@ -10,7 +10,6 @@ import { TaskTable } from '@/components/tasks/TaskTable'
 import { TaskKanban } from '@/components/tasks/TaskKanban'
 import { TaskCalendar } from '@/components/tasks/TaskCalendar'
 import { ViewSwitcher } from '@/components/tasks/ViewSwitcher'
-import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog'
 import { InviteClientModal } from '@/components/projects/InviteClientModal'
 import { ProjectChat } from '@/components/chat/ProjectChat'
 import { formatDuration } from '@/lib/utils'
@@ -21,14 +20,11 @@ export default function ProjectDetailsPage() {
     const projectId = params.id as string
 
     const { projects } = useProjectStore()
-    const { tasks, fetchTasks, viewMode } = useTaskStore()
-    const [isCreateOpen, setIsCreateOpen] = useState(false)
+    const { tasks, fetchTasks, viewMode, openCreateModal } = useTaskStore()
     const [isInviteClientOpen, setIsInviteClientOpen] = useState(false)
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null) // State for calendar date select
 
     const handleDateClick = (date: Date) => {
-        setSelectedDate(date)
-        setIsCreateOpen(true)
+        openCreateModal(date, projectId)
     }
 
     // Find current project
@@ -96,7 +92,7 @@ export default function ProjectDetailsPage() {
                             Invite Client
                         </button>
                         <button
-                            onClick={() => setIsCreateOpen(true)}
+                            onClick={() => openCreateModal(null, projectId)}
                             className="px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors shadow-lg shadow-white/10 flex items-center justify-center"
                         >
                             + Add Task
@@ -224,16 +220,6 @@ export default function ProjectDetailsPage() {
                     )}
                 </div>
             </div>
-
-            <CreateTaskDialog
-                isOpen={isCreateOpen}
-                initialProjectId={projectId}
-                initialDate={selectedDate}
-                onClose={() => {
-                    setIsCreateOpen(false)
-                    setSelectedDate(null)
-                }}
-            />
 
             <InviteClientModal
                 isOpen={isInviteClientOpen}

@@ -1,16 +1,12 @@
 'use client'
-
-import { useState } from 'react'
 import { TaskCalendar } from '@/components/tasks/TaskCalendar'
-import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog'
+import { useTaskStore } from '@/stores/useTaskStore'
 
 export default function CalendarPage() {
-    const [isCreateOpen, setIsCreateOpen] = useState(false)
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+    const { openCreateModal } = useTaskStore()
 
     const handleDateClick = (date: Date) => {
-        setSelectedDate(date)
-        setIsCreateOpen(true)
+        openCreateModal(date)
     }
 
     return (
@@ -25,12 +21,6 @@ export default function CalendarPage() {
             <div className="h-[calc(100vh-200px)]">
                 <TaskCalendar onDateClick={handleDateClick} />
             </div>
-
-            <CreateTaskDialog
-                isOpen={isCreateOpen}
-                onClose={() => setIsCreateOpen(false)}
-                initialDate={selectedDate}
-            />
         </div>
     )
 }

@@ -6,7 +6,6 @@ import { MoreHorizontal, Play, CheckCircle2, Circle, AlertCircle, Edit2, Trash2,
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useTimerStore } from '@/stores/useTimerStore'
 import { EditTaskDialog } from './EditTaskDialog'
-import { CreateTaskDialog } from './CreateTaskDialog'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ManualTimeDialog } from '@/components/timer/ManualTimeDialog'
 import { useProjectStore } from '@/stores/useProjectStore'
@@ -14,6 +13,7 @@ import { useUserStore } from '@/stores/useUserStore'
 import { cn } from '@/lib/utils'
 import { Database } from '@/types/supabase'
 import { staggerContainer, staggerItem } from '@/lib/animations'
+import { ProjectIcon } from '@/components/ui/ProjectIcon'
 
 type Task = Database['public']['Tables']['tasks']['Row']
 
@@ -25,7 +25,6 @@ export function TaskTable() {
     const [editingTask, setEditingTask] = useState<Task | null>(null)
     const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
     const [manualTimeTaskId, setManualTimeTaskId] = useState<string | null>(null)
-    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
     const [searchQuery, setSearchQuery] = useState('')
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
@@ -76,19 +75,12 @@ export function TaskTable() {
                 <div className="flex flex-col items-center justify-center h-64 border border-dashed border-white/10 rounded-3xl bg-white/[0.02]">
                     <p className="text-zinc-500 mb-4">No tasks found</p>
                     <button
-                        onClick={() => setIsCreateDialogOpen(true)}
+                        onClick={() => useTaskStore.getState().openCreateModal()}
                         className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-500 transition-colors"
                     >
                         Create your first task
                     </button>
                 </div>
-
-                <CreateTaskDialog
-                    isOpen={isCreateDialogOpen}
-                    onClose={() => setIsCreateDialogOpen(false)}
-                    initialDate={null}
-                    initialProjectId={undefined}
-                />
             </>
         )
     }
@@ -178,36 +170,47 @@ export function TaskTable() {
                                         <td className="px-6 py-4">
                                             {project ? (
                                                 <div className="flex items-center gap-2">
-                                                    <div
-                                                        className="w-2 h-2 rounded-full"
-                                                        style={{ backgroundColor: project.color }}
-                                                    />
-                                                    <span className="text-zinc-400">{project.name}</span>
+                                                    <ProjectIcon project={project} size="sm" /> <span className="text-zinc-400">{project.name}</span>
                                                 </div>
                                             ) : (
                                                 <span className="text-zinc-600 italic">-</span>
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={cn(
-                                                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
-                                                task.status === 'done' ? "bg-green-500/10 text-green-400 border-green-500/20" :
-                                                    task.status === 'in_progress' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                                                        "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
-                                            )}>
-                                                {task.status.replace('_', ' ')}
-                                            </span>
+                                            <select
+                                                value={task.status}
+                                                onChange={(e) => useTaskStore.getState().updateTask(task.id, { status: e.target.value as Task["status"] })}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className={cn(
+                                                    "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500/50",
+                                                    task.status === 'done' ? "bg-green-500/10 text-green-400 border-green-500/20" :
+                                                        task.status === 'in_progress' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                                            "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
+                                                )}
+                                            >
+                                                <option value="todo" className="bg-zinc-900 text-zinc-300">TODO</option>
+                                                <option value="in_progress" className="bg-zinc-900 text-zinc-300">IN PROGRESS</option>
+                                                <option value="done" className="bg-zinc-900 text-zinc-300">DONE</option>
+                                            </select>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                {task.priority === 'high' && <AlertCircle size={14} className="text-red-400" />}
-                                                <span className={cn(
-                                                    task.priority === 'high' ? "text-red-400" :
-                                                        task.priority === 'medium' ? "text-orange-400" :
-                                                            "text-green-400"
-                                                )}>
-                                                    {task.priority}
-                                                </span>
+                                            <div className="flex items-center gap-1">
+                                                {task.priority === 'high' && <AlertCircle size={14} className="text-red-400 shrink-0" />}
+                                                <select
+                                                    value={task.priority}
+                                                    onChange={(e) => useTaskStore.getState().updateTask(task.id, { priority: e.target.value as Task["priority"] })}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className={cn(
+                                                        "bg-transparent appearance-none cursor-pointer focus:outline-none focus:underline font-medium text-sm w-full",
+                                                        task.priority === 'high' ? "text-red-400" :
+                                                            task.priority === 'medium' ? "text-orange-400" :
+                                                                "text-green-400"
+                                                    )}
+                                                >
+                                                    <option value="low" className="bg-zinc-900 text-green-400">low</option>
+                                                    <option value="medium" className="bg-zinc-900 text-orange-400">medium</option>
+                                                    <option value="high" className="bg-zinc-900 text-red-400">high</option>
+                                                </select>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 font-mono text-zinc-400">
@@ -272,33 +275,48 @@ export function TaskTable() {
                                             </h4>
                                             {project && (
                                                 <div className="flex items-center gap-2 mt-1">
-                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: project.color }} />
+                                                    <ProjectIcon project={project} size="sm" />
                                                     <span className="text-xs text-zinc-400">{project.name}</span>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                    <span className={cn(
-                                        "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
-                                        task.status === 'done' ? "bg-green-500/10 text-green-400 border-green-500/20" :
-                                            task.status === 'in_progress' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                                                "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
-                                    )}>
-                                        {task.status.replace('_', ' ')}
-                                    </span>
+                                    <select
+                                        value={task.status}
+                                        onChange={(e) => useTaskStore.getState().updateTask(task.id, { status: e.target.value as Task["status"] })}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className={cn(
+                                            "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500/50",
+                                            task.status === 'done' ? "bg-green-500/10 text-green-400 border-green-500/20" :
+                                                task.status === 'in_progress' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                                    "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
+                                        )}
+                                    >
+                                        <option value="todo" className="bg-zinc-900 text-zinc-300">TODO</option>
+                                        <option value="in_progress" className="bg-zinc-900 text-zinc-300">IN PROGRESS</option>
+                                        <option value="done" className="bg-zinc-900 text-zinc-300">DONE</option>
+                                    </select>
                                 </div>
 
                                 <div className="flex items-center justify-between text-sm text-zinc-400 pt-2 border-t border-white/5">
                                     <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-2">
-                                            {task.priority === 'high' && <AlertCircle size={14} className="text-red-400" />}
-                                            <span className={cn(
-                                                task.priority === 'high' ? "text-red-400" :
-                                                    task.priority === 'medium' ? "text-orange-400" :
-                                                        "text-green-400"
-                                            )}>
-                                                {task.priority}
-                                            </span>
+                                        <div className="flex items-center gap-1">
+                                            {task.priority === 'high' && <AlertCircle size={14} className="text-red-400 shrink-0" />}
+                                            <select
+                                                value={task.priority}
+                                                onChange={(e) => useTaskStore.getState().updateTask(task.id, { priority: e.target.value as Task["priority"] })}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className={cn(
+                                                    "bg-transparent appearance-none cursor-pointer focus:outline-none focus:underline font-medium text-sm",
+                                                    task.priority === 'high' ? "text-red-400" :
+                                                        task.priority === 'medium' ? "text-orange-400" :
+                                                            "text-green-400"
+                                                )}
+                                            >
+                                                <option value="low" className="bg-zinc-900 text-green-400">low</option>
+                                                <option value="medium" className="bg-zinc-900 text-orange-400">medium</option>
+                                                <option value="high" className="bg-zinc-900 text-red-400">high</option>
+                                            </select>
                                         </div>
                                         <div className="font-mono">
                                             {formatDuration(task.total_duration || 0)}
@@ -330,8 +348,12 @@ export function TaskTable() {
                 onCancel={() => setDeletingTaskId(null)}
                 onConfirm={async () => {
                     if (deletingTaskId) {
-                        await useTaskStore.getState().deleteTask(deletingTaskId)
-                        setDeletingTaskId(null)
+                        try {
+                            await useTaskStore.getState().deleteTask(deletingTaskId)
+                            setDeletingTaskId(null)
+                        } catch (error: any) {
+                            alert(error.message)
+                        }
                     }
                 }}
                 title="Delete Task"

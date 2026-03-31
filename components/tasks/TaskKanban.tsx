@@ -112,15 +112,26 @@ function KanbanCard({ task, onEdit }: any) {
             )}
         >
             <div className="flex items-start justify-between mb-2">
-                <span className={cn(
-                    "px-2 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider",
-                    task.priority === 'urgent' ? "bg-purple-500/10 text-purple-500 border-purple-500/20" :
-                        task.priority === 'high' ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                            task.priority === 'medium' ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
-                                "bg-green-500/10 text-green-500 border-green-500/20"
-                )}>
-                    {task.priority}
-                </span>
+                <select
+                    value={task.priority}
+                    onChange={(e) => {
+                        e.stopPropagation()
+                        useTaskStore.getState().updateTask(task.id, { priority: e.target.value as any })
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className={cn(
+                        "px-2 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary-500/50 bg-transparent text-center",
+                        task.priority === 'urgent' ? "bg-purple-500/10 text-purple-500 border-purple-500/20" :
+                            task.priority === 'high' ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                                task.priority === 'medium' ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
+                                    "bg-green-500/10 text-green-500 border-green-500/20"
+                    )}
+                >
+                    <option value="low" className="bg-zinc-900 text-green-500 text-sm normal-case">Low</option>
+                    <option value="medium" className="bg-zinc-900 text-orange-500 text-sm normal-case">Medium</option>
+                    <option value="high" className="bg-zinc-900 text-red-500 text-sm normal-case">High</option>
+                    <option value="urgent" className="bg-zinc-900 text-purple-500 text-sm normal-case">Urgent</option>
+                </select>
                 <button
                     onClick={(e) => {
                         e.stopPropagation()

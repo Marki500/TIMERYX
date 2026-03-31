@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Calendar as CalendarIcon, Flag, Trash2, Tag } from 'lucide-react'
-import { useTaskStore } from '@/stores/useTaskStore'
+import { X, Calendar as CalendarIcon, Flag, Trash2, Tag, Clock, Plus, Check } from 'lucide-react'
+import { useTaskStore, Task } from '@/stores/useTaskStore'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useUserStore } from '@/stores/useUserStore'
+import { useTimerStore } from '@/stores/useTimerStore'
 import { cn } from '@/lib/utils'
 import { Database } from '@/types/supabase'
-
-type Task = Database['public']['Tables']['tasks']['Row']
 
 interface EditTaskDialogProps {
     isOpen: boolean
@@ -28,8 +27,10 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
     const [description, setDescription] = useState('')
     const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium')
     const [status, setStatus] = useState<'backlog' | 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled'>('todo')
+    const [subtasks, setSubtasks] = useState<{ id: string; text: string; isCompleted: boolean }[]>([])
     const [dueDate, setDueDate] = useState('')
     const [selectedProjectId, setSelectedProjectId] = useState<string>('')
+    const [totalDurationSeconds, setTotalDurationSeconds] = useState(0)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [showPriorityDropdown, setShowPriorityDropdown] = useState(false)
@@ -52,12 +53,27 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
     // Populate form when task changes
     useEffect(() => {
         if (task && isOpen) {
-            setTitle(task.title || '')
-            setDescription(task.description || '')
-            setPriority(task.priority || 'medium')
-            setStatus(task.status || 'todo')
-            setDueDate(task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : '')
-            setSelectedProjectId(task.project_id || '')
+            const taskData = task as any
+            setTitle(taskData.title || '')
+            const fullDesc = taskData.description || ''
+            if (fullDesc.includes('\n\n---SUBTASKS---\n')) {
+                const parts = fullDesc.split('\n\n---SUBTASKS---\n')
+                setDescription(parts[0])
+                const parsed = parts[1].split('\n').filter(Boolean).map((line: string, i: number) => ({
+                    id: `st-${Date.now()}-${i}`,
+                    text: line.replace(/^- \[(x| )\] /, ''),
+                    isCompleted: line.startsWith('- [x]')
+                }))
+                setSubtasks(parsed)
+            } else {
+                setDescription(fullDesc)
+                setSubtasks([])
+            }
+            setPriority(taskData.priority || 'medium')
+            setStatus(taskData.status || 'todo')
+            setDueDate(taskData.due_date ? new Date(taskData.due_date).toISOString().split('T')[0] : '')
+            setSelectedProjectId(taskData.project_id || '')
+            setTotalDurationSeconds(taskData.total_duration || 0)
         }
     }, [task, isOpen])
 
@@ -81,14 +97,25 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
 
         setIsSubmitting(true)
         try {
+            const finalDesc = subtasks.length > 0
+                ? `${description}\n\n---SUBTASKS---\n${subtasks.map(st => `- [${st.isCompleted ? 'x' : ' '}] ${st.text}`).join('\n')}`
+                : description
+
+            // Update task fields (without total_duration — it's computed)
             await updateTask(task.id, {
                 title,
-                description,
+                description: finalDesc,
                 priority,
                 status,
                 project_id: selectedProjectId || undefined,
                 due_date: dueDate ? new Date(dueDate).toISOString() : null,
             })
+
+            // If duration changed, replace time entries with the new total
+            const originalDuration = (task as any).total_duration || 0
+            if (totalDurationSeconds !== originalDuration) {
+                await useTimerStore.getState().setTaskDuration(task.id, totalDurationSeconds, dueDate)
+            }
 
             onClose()
         } catch (error) {
@@ -105,8 +132,9 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
         try {
             await deleteTask(task.id)
             onClose()
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to delete task:', error)
+            alert(error.message)
         } finally {
             setIsSubmitting(false)
             setShowDeleteConfirm(false)
@@ -131,11 +159,11 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative w-full max-w-lg bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl shadow-black/80 z-10 overflow-hidden ring-1 ring-white/5"
+                        className="relative w-full max-w-lg bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl shadow-black/80 z-10 ring-1 ring-white/5"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none rounded-3xl" />
 
-                        <div className="relative p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                        <div className="relative p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02] rounded-t-3xl">
                             <h2 className="text-xl font-bold text-white tracking-tight">Edit Task</h2>
                             <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-zinc-400 hover:text-white transition-colors">
                                 <X size={20} />
@@ -161,6 +189,61 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
                                         onChange={(e) => setDescription(e.target.value)}
                                         className="w-full bg-transparent text-zinc-400 placeholder-zinc-600 focus:outline-none resize-none min-h-[80px]"
                                     />
+                                </div>
+
+                                {/* Subtasks UI */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-zinc-400">
+                                        <span className="text-sm font-medium">Subtasks</span>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setSubtasks([...subtasks, { id: Date.now().toString(), text: '', isCompleted: false }])}
+                                            className="text-xs flex items-center gap-1 hover:text-white transition-colors"
+                                        >
+                                            <Plus size={14} /> Add Subtask
+                                        </button>
+                                    </div>
+                                    {subtasks.length > 0 && (
+                                        <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                            {subtasks.map((st, i) => (
+                                                <div key={st.id} className="flex items-start gap-2 group">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newSt = [...subtasks]
+                                                            newSt[i].isCompleted = !newSt[i].isCompleted
+                                                            setSubtasks(newSt)
+                                                        }}
+                                                        className={cn("mt-1 shrink-0 w-4 h-4 rounded-sm border flex items-center justify-center transition-colors",
+                                                            st.isCompleted ? "bg-primary-500 border-primary-500 text-white" : "border-zinc-600 hover:border-zinc-400"
+                                                        )}
+                                                    >
+                                                        {st.isCompleted && <Check size={12} strokeWidth={3} />}
+                                                    </button>
+                                                    <input
+                                                        type="text"
+                                                        value={st.text}
+                                                        onChange={(e) => {
+                                                            const newSt = [...subtasks]
+                                                            newSt[i].text = e.target.value
+                                                            setSubtasks(newSt)
+                                                        }}
+                                                        placeholder="Subtask description..."
+                                                        className={cn("flex-1 bg-transparent text-sm focus:outline-none transition-colors",
+                                                            st.isCompleted ? "text-zinc-500 line-through" : "text-zinc-300"
+                                                        )}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSubtasks(subtasks.filter((_, idx) => idx !== i))}
+                                                        className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 transition-all p-1"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex flex-wrap gap-3 pt-2">
@@ -312,6 +395,40 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
                                                     width: '140px'
                                                 }}
                                             />
+                                        </div>
+                                    </div>
+
+                                    {/* Total Duration Editing */}
+                                    <div className="relative">
+                                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 hover:border-white/20 hover:from-white/[0.12] hover:to-white/[0.04] text-sm font-medium transition-all backdrop-blur-sm">
+                                            <Clock size={14} className="text-zinc-400" />
+                                            <div className="flex items-center gap-1">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={Math.floor(totalDurationSeconds / 3600)}
+                                                    onChange={(e) => {
+                                                        const h = parseInt(e.target.value) || 0
+                                                        const m = Math.floor((totalDurationSeconds % 3600) / 60)
+                                                        setTotalDurationSeconds(h * 3600 + m * 60)
+                                                    }}
+                                                    className="bg-transparent text-zinc-300 text-sm outline-none w-8 text-center"
+                                                />
+                                                <span className="text-zinc-500">h</span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max="59"
+                                                    value={Math.floor((totalDurationSeconds % 3600) / 60)}
+                                                    onChange={(e) => {
+                                                        const h = Math.floor(totalDurationSeconds / 3600)
+                                                        const m = parseInt(e.target.value) || 0
+                                                        setTotalDurationSeconds(h * 3600 + m * 60)
+                                                    }}
+                                                    className="bg-transparent text-zinc-300 text-sm outline-none w-8 text-center"
+                                                />
+                                                <span className="text-zinc-500">m</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
