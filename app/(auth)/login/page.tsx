@@ -21,19 +21,30 @@ function LoginContent() {
         setLoading(true)
         setError(null)
 
+        console.log('[Auth-Login] Starting login process...')
+        console.time('[Auth-Login] signInWithPassword')
+
         try {
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             })
 
-            if (error) throw error
+            console.timeEnd('[Auth-Login] signInWithPassword')
+
+            if (error) {
+                console.error('[Auth-Login] Login error:', error.message)
+                throw error
+            }
 
             if (data.user) {
+                console.log('[Auth-Login] User authenticated successfully:', data.user.id)
+                console.log('[Auth-Login] Redirecting to:', nextUrl)
                 router.push(nextUrl)
                 router.refresh()
             }
         } catch (err: any) {
+            console.error('[Auth-Login] Caught error:', err)
             setError(err.message || 'An error occurred during login')
         } finally {
             setLoading(false)

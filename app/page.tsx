@@ -21,19 +21,30 @@ export default function AuthPage() {
         setLoading(true)
         setError(null)
 
+        console.log('[Auth] Starting login process...')
+        console.time('[Auth] signInWithPassword')
+
         try {
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             })
 
-            if (error) throw error
+            console.timeEnd('[Auth] signInWithPassword')
+
+            if (error) {
+                console.error('[Auth] Login error:', error.message)
+                throw error
+            }
 
             if (data.user) {
+                console.log('[Auth] User authenticated successfully:', data.user.id)
+                console.log('[Auth] Redirecting to /dashboard...')
                 router.push('/dashboard')
                 router.refresh()
             }
         } catch (err: any) {
+            console.error('[Auth] Caught error:', err)
             setError(err.message || 'An error occurred during login')
         } finally {
             setLoading(false)
