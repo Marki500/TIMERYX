@@ -66,7 +66,11 @@ export async function middleware(request: NextRequest) {
         path === '/login' ||
         path === '/register' ||
         path.startsWith('/client/invite/') ||
-        path === '/accept-invite'
+        path === '/accept-invite' ||
+        path === '/manifest.webmanifest' ||
+        path === '/manifest.json' ||
+        path === '/sw.js' ||
+        path.startsWith('/icons/')
 
     // If user is not signed in and the route is not public, redirect to login
     if (!user && !isPublicRoute) {
@@ -97,6 +101,6 @@ export const config = {
          * - /api (API routes)
          * Feel free to modify this pattern to include more paths.
          */
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }
