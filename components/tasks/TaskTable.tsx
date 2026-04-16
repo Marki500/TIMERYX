@@ -19,7 +19,8 @@ type Task = Database['public']['Tables']['tasks']['Row']
 
 export function TaskTable() {
     const { tasks, isLoading } = useTaskStore()
-    const { startTimer, activeEntry } = useTimerStore()
+    const startTimer = useTimerStore(state => state.startTimer)
+    const activeEntry = useTimerStore(state => state.activeEntry)
     const { projects } = useProjectStore()
     const { currentWorkspace } = useUserStore()
     const [editingTask, setEditingTask] = useState<Task | null>(null)

@@ -278,18 +278,6 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             const elapsed = Math.max(0, Math.floor((now - start) / 1000))
 
             set({ duration: elapsed })
-
-            // Update localStorage periodically
-            if (typeof window !== 'undefined') {
-                const state = get()
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                    activeEntry: state.activeEntry,
-                    taskTitle: state.taskTitle,
-                    duration: state.duration,
-                    isPaused: state.isPaused,
-                    pausedAt: state.pausedAt
-                }))
-            }
         }
     },
 

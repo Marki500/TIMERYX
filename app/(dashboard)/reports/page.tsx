@@ -5,6 +5,8 @@ import { WeeklySummary } from '@/components/reports/WeeklySummary'
 import { TimeLogTable, FilterState } from '@/components/reports/TimeLogTable'
 import { ReportFilters } from '@/components/reports/ReportFilters'
 
+import { MonthlyCalendar } from '@/components/reports/MonthlyCalendar'
+
 export default function ReportsPage() {
     const [filters, setFilters] = useState<FilterState>({
         dateRange: 'last7',
@@ -21,6 +23,11 @@ export default function ReportsPage() {
             <WeeklySummary />
 
             <ReportFilters onFilterChange={setFilters} />
+
+            <div className="pt-8 border-t border-white/5">
+                <h2 className="text-lg font-bold text-white mb-4">Monthly Calendar</h2>
+                <MonthlyCalendar />
+            </div>
 
             <div className="pt-8 border-t border-white/5">
                 <h2 className="text-lg font-bold text-white mb-4">Time Log</h2>

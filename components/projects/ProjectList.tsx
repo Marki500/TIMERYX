@@ -11,6 +11,7 @@ import { CreateProjectDialog } from './CreateProjectDialog'
 import { EditProjectDialog } from './EditProjectDialog'
 import { formatDuration } from '@/lib/utils'
 import { ProjectIcon } from '@/components/ui/ProjectIcon'
+import { createClient } from '@/lib/supabase/client'
 
 export function ProjectList() {
     const { projects, fetchProjects, deleteProject, isLoading } = useProjectStore()
@@ -18,6 +19,7 @@ export function ProjectList() {
     const { tasks, fetchTasks } = useTaskStore()
     const [isCreateOpen, setIsCreateOpen] = useState(false)
     const [editingProject, setEditingProject] = useState<any>(null)
+    const [monthlyHours, setMonthlyHours] = useState<Record<string, number>>({})
 
     useEffect(() => {
         if (currentWorkspace) {
@@ -26,6 +28,41 @@ export function ProjectList() {
             fetchTasks()
         }
     }, [currentWorkspace, fetchProjects, fetchTasks])
+
+    useEffect(() => {
+        async function fetchMonthlyHours() {
+            if (!currentWorkspace) return
+            const supabase = createClient()
+            const now = new Date()
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+            
+            const { data, error } = await supabase
+                .from('time_entries')
+                .select(`
+                    start_time,
+                    end_time,
+                    tasks!inner(project_id)
+                `)
+                .gte('start_time', firstDay)
+            
+            if (!error && data) {
+                const hours: Record<string, number> = {}
+                data.forEach((entry: any) => {
+                    const projId = entry.tasks?.project_id
+                    if (!projId) return
+                    
+                    const end = entry.end_time ? new Date(entry.end_time).getTime() : Date.now()
+                    const start = new Date(entry.start_time).getTime()
+                    const durationInSeconds = (end - start) / 1000
+                    
+                    if (!hours[projId]) hours[projId] = 0
+                    hours[projId] += Math.max(0, durationInSeconds / 3600)
+                })
+                setMonthlyHours(hours)
+            }
+        }
+        fetchMonthlyHours()
+    }, [currentWorkspace])
 
     if (!currentWorkspace) return null
 
@@ -112,19 +149,16 @@ export function ProjectList() {
                             <div className="space-y-4">
                                 {(() => {
                                     // Calculate time from tasks for this project
-                                    const projectTasks = tasks.filter(t => t.project_id === project.id)
-                                    const monthlySeconds = projectTasks.reduce((sum, task) =>
-                                        sum + (task.total_duration || 0), 0)
-                                    const monthlyHours = monthlySeconds / 3600
+                                    const projMonthlyHours = monthlyHours[project.id] || 0
                                     const budgetHours = project.budget_hours_monthly || 0
-                                    const percentage = budgetHours > 0 ? (monthlyHours / budgetHours) * 100 : 0
+                                    const percentage = budgetHours > 0 ? (projMonthlyHours / budgetHours) * 100 : 0
 
                                     return (
                                         <div>
                                             <div className="flex items-center justify-between text-sm mb-2">
                                                 <span className="text-zinc-400">This Month</span>
                                                 <span className="text-white font-mono">
-                                                    {monthlyHours.toFixed(1)}h / {budgetHours}h
+                                                    {projMonthlyHours.toFixed(1)}h / {budgetHours}h
                                                 </span>
                                             </div>
                                             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
