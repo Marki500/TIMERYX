@@ -1,25 +1,42 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useTaskStore } from '@/stores/useTaskStore'
+import { createClient } from '@/lib/supabase/client'
 import { formatDuration } from '@/lib/utils'
 
 export function WeeklySummary() {
-    // Ideally we would fetch aggregated data from a new RPC or useTimerStore history
-    // For V1, we will mock this or aggregate from tasks client-side if tasks have entries loaded. 
-    // To do this properly, we should probably fetch time_entries roughly.
-    // For now, let's show a placeholder or basic stat from tasks duration sum.
+    const [monthlySeconds, setMonthlySeconds] = useState(0)
 
-    // NOTE: In a real app, we need a specific store/RPC for this analytics data.
-    // I will implement a visual placeholder that uses the total duration of tasks as "This Week" for now 
-    // to meet the V1 requirement without over-engineering a full analytics backend yet.
+    useEffect(() => {
+        const supabase = createClient()
 
-    const { tasks } = useTaskStore()
+        async function fetchMonthlyTotal() {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return
 
-    const totalDuration = useMemo(() => {
-        return tasks.reduce((acc, task) => acc + (task.total_duration || 0), 0)
-    }, [tasks])
+            const startOfMonth = new Date()
+            startOfMonth.setDate(1)
+            startOfMonth.setHours(0, 0, 0, 0)
+
+            const { data } = await (supabase
+                .from('time_entries')
+                .select('start_time, end_time')
+                .eq('user_id', user.id)
+                .gte('start_time', startOfMonth.toISOString())
+                .not('end_time', 'is', null) as any)
+
+            if (data) {
+                const total = data.reduce((acc: number, entry: any) => {
+                    const dur = (new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / 1000
+                    return acc + Math.max(0, dur)
+                }, 0)
+                setMonthlySeconds(total)
+            }
+        }
+
+        fetchMonthlyTotal()
+    }, [])
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -30,8 +47,9 @@ export function WeeklySummary() {
             >
                 <h3 className="text-zinc-400 text-sm font-medium mb-2">Total Time Tracked</h3>
                 <div className="text-3xl font-bold text-white font-mono">
-                    {formatDuration(totalDuration)}
+                    {formatDuration(monthlySeconds)}
                 </div>
+                <p className="text-xs text-zinc-600 mt-1">This month</p>
             </motion.div>
 
             {/* Placeholders for future stats */}
