@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, X, Edit2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, X, Edit2, Plus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     format,
@@ -19,6 +19,7 @@ import {
 } from 'date-fns'
 import { formatDurationShort } from '@/lib/utils/formatDuration'
 import { EditTimeEntryDialog, EntryToEdit } from '@/components/reports/EditTimeEntryDialog'
+import { ManualTimeDialog } from '@/components/timer/ManualTimeDialog'
 
 interface DayEntry {
     id: string
@@ -39,6 +40,7 @@ export function MonthlyCalendar() {
     const [dayEntries, setDayEntries] = useState<DayEntry[]>([])
     const [isDayLoading, setIsDayLoading] = useState(false)
     const [editEntry, setEditEntry] = useState<EntryToEdit | null>(null)
+    const [addDate, setAddDate] = useState<string | null>(null)
 
     useEffect(() => {
         async function fetchMonthData() {
@@ -232,12 +234,21 @@ export function MonthlyCalendar() {
                                     </span>
                                 )}
                             </div>
-                            <button
-                                onClick={() => { setSelectedDay(null); setDayEntries([]) }}
-                                className="p-1.5 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"
-                            >
-                                <X size={16} />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setAddDate(format(selectedDay, 'yyyy-MM-dd'))}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 transition-colors text-xs font-medium"
+                                >
+                                    <Plus size={13} />
+                                    Add entry
+                                </button>
+                                <button
+                                    onClick={() => { setSelectedDay(null); setDayEntries([]) }}
+                                    className="p-1.5 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Panel content */}
@@ -272,6 +283,12 @@ export function MonthlyCalendar() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <ManualTimeDialog
+                isOpen={!!addDate}
+                onClose={() => setAddDate(null)}
+                preSelectedDate={addDate || undefined}
+            />
 
             <EditTimeEntryDialog
                 isOpen={!!editEntry}

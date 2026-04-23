@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDuration } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -186,9 +186,9 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
                                 }, 0)
 
                                 return (
-                                    <>
+                                    <React.Fragment key={dateKey}>
                                         {/* Date group header */}
-                                        <tr key={`header-${dateKey}`} className="bg-white/[0.02]">
+                                        <tr className="bg-white/[0.02]">
                                             <td colSpan={3} className="px-6 py-2.5">
                                                 <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                                                     {format(new Date(dateKey + 'T12:00:00'), 'EEEE, MMMM d yyyy')}
@@ -259,7 +259,7 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
                                                 </tr>
                                             )
                                         })}
-                                    </>
+                                    </React.Fragment>
                                 )
                             })}
                         </tbody>
