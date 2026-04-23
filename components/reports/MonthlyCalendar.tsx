@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, X, Edit2, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, X, Edit2, Plus, CheckSquare } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     format,
@@ -20,6 +20,7 @@ import {
 import { formatDurationShort } from '@/lib/utils/formatDuration'
 import { EditTimeEntryDialog, EntryToEdit } from '@/components/reports/EditTimeEntryDialog'
 import { ManualTimeDialog } from '@/components/timer/ManualTimeDialog'
+import { useTaskStore } from '@/stores/useTaskStore'
 
 interface DayEntry {
     id: string
@@ -41,6 +42,19 @@ export function MonthlyCalendar() {
     const [isDayLoading, setIsDayLoading] = useState(false)
     const [editEntry, setEditEntry] = useState<EntryToEdit | null>(null)
     const [addDate, setAddDate] = useState<string | null>(null)
+    const [addMenuOpen, setAddMenuOpen] = useState(false)
+    const addMenuRef = useRef<HTMLDivElement>(null)
+    const { openCreateModal } = useTaskStore()
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+                setAddMenuOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
 
     useEffect(() => {
         async function fetchMonthData() {
@@ -235,13 +249,35 @@ export function MonthlyCalendar() {
                                 )}
                             </div>
                             <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setAddDate(format(selectedDay, 'yyyy-MM-dd'))}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 transition-colors text-xs font-medium"
-                                >
-                                    <Plus size={13} />
-                                    Add entry
-                                </button>
+                                <div className="relative" ref={addMenuRef}>
+                                    <button
+                                        onClick={() => setAddMenuOpen(v => !v)}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 transition-colors text-xs font-medium"
+                                    >
+                                        <Plus size={13} />
+                                        Add
+                                    </button>
+
+                                    {addMenuOpen && (
+                                        <div className="absolute right-0 top-full mt-1 w-44 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                                            <button
+                                                onClick={() => { setAddDate(format(selectedDay!, 'yyyy-MM-dd')); setAddMenuOpen(false) }}
+                                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors text-left"
+                                            >
+                                                <Clock size={14} className="text-primary-400 shrink-0" />
+                                                Log time entry
+                                            </button>
+                                            <button
+                                                onClick={() => { openCreateModal(selectedDay!, undefined); setAddMenuOpen(false) }}
+                                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors text-left"
+                                            >
+                                                <CheckSquare size={14} className="text-green-400 shrink-0" />
+                                                New task
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <button
                                     onClick={() => { setSelectedDay(null); setDayEntries([]) }}
                                     className="p-1.5 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"
