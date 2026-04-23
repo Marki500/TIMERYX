@@ -1,13 +1,14 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDuration } from '@/lib/utils'
 import { format } from 'date-fns'
-import { Download, FileText, Plus, Edit2 } from 'lucide-react'
+import { Download, FileText, Plus, Edit2, Clock, CheckSquare } from 'lucide-react'
 import { exportToCSV, exportToPDF, exportMonthlyProjectPDF } from '@/lib/export'
 import { ManualTimeDialog } from '@/components/timer/ManualTimeDialog'
 import { EditTimeEntryDialog, EntryToEdit } from '@/components/reports/EditTimeEntryDialog'
+import { useTaskStore } from '@/stores/useTaskStore'
 
 interface TimeEntryLog {
     id: string
@@ -44,6 +45,9 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
     const [isLoading, setIsLoading] = useState(true)
     const [addDate, setAddDate] = useState<string | null>(null)
     const [editEntry, setEditEntry] = useState<EntryToEdit | null>(null)
+    const [openMenuDate, setOpenMenuDate] = useState<string | null>(null)
+    const menuRef = useRef<HTMLDivElement>(null)
+    const { openCreateModal } = useTaskStore()
 
     const fetchEntries = async () => {
         setIsLoading(true)
@@ -103,6 +107,16 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
     }
 
     useEffect(() => { fetchEntries() }, [filters])
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setOpenMenuDate(null)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
 
     if (isLoading) return <div className="h-40 bg-white/5 rounded-xl animate-pulse" />
 
@@ -198,13 +212,34 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
                                                 <span className="text-xs font-mono text-zinc-500">{formatDuration(dayTotal)}</span>
                                             </td>
                                             <td className="px-6 py-2.5 text-right">
-                                                <button
-                                                    onClick={() => setAddDate(dateKey)}
-                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 transition-colors text-xs font-medium"
-                                                >
-                                                    <Plus size={12} />
-                                                    Add
-                                                </button>
+                                                <div className="relative inline-block" ref={openMenuDate === dateKey ? menuRef : null}>
+                                                    <button
+                                                        onClick={() => setOpenMenuDate(openMenuDate === dateKey ? null : dateKey)}
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 transition-colors text-xs font-medium"
+                                                    >
+                                                        <Plus size={12} />
+                                                        Add
+                                                    </button>
+
+                                                    {openMenuDate === dateKey && (
+                                                        <div className="absolute right-0 top-full mt-1 w-44 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                                                            <button
+                                                                onClick={() => { setAddDate(dateKey); setOpenMenuDate(null) }}
+                                                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors text-left"
+                                                            >
+                                                                <Clock size={14} className="text-primary-400 shrink-0" />
+                                                                Log time entry
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { openCreateModal(new Date(dateKey + 'T12:00:00'), undefined); setOpenMenuDate(null) }}
+                                                                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors text-left"
+                                                            >
+                                                                <CheckSquare size={14} className="text-green-400 shrink-0" />
+                                                                New task
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
 
