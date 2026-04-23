@@ -4,11 +4,12 @@ import React, { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDuration } from '@/lib/utils'
 import { format } from 'date-fns'
-import { Download, FileText, Plus, Edit2, Clock, CheckSquare } from 'lucide-react'
+import { Download, FileText, Plus, Edit2, Clock, CheckSquare, Trash2 } from 'lucide-react'
 import { exportToCSV, exportToPDF, exportMonthlyProjectPDF } from '@/lib/export'
 import { ManualTimeDialog } from '@/components/timer/ManualTimeDialog'
 import { EditTimeEntryDialog, EntryToEdit } from '@/components/reports/EditTimeEntryDialog'
 import { useTaskStore } from '@/stores/useTaskStore'
+import { useToast } from '@/stores/useToast'
 
 interface TimeEntryLog {
     id: string
@@ -48,6 +49,7 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
     const [openMenuDate, setOpenMenuDate] = useState<string | null>(null)
     const menuRef = useRef<HTMLDivElement>(null)
     const { openCreateModal } = useTaskStore()
+    const { addToast } = useToast()
 
     const fetchEntries = async () => {
         setIsLoading(true)
@@ -104,6 +106,17 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
             setEntries(filteredData)
         }
         setIsLoading(false)
+    }
+
+    const deleteEntry = async (id: string) => {
+        const supabase = createClient()
+        const { error } = await supabase.from('time_entries').delete().eq('id', id)
+        if (error) {
+            addToast('Failed to delete entry.', 'error')
+        } else {
+            addToast('Entry deleted.', 'success')
+            fetchEntries()
+        }
     }
 
     useEffect(() => { fetchEntries() }, [filters])
@@ -278,18 +291,27 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
                                                         {formatDuration(duration)}
                                                     </td>
                                                     <td className="px-6 py-3.5 text-right">
-                                                        <button
-                                                            onClick={() => setEditEntry({
-                                                                id: entry.id,
-                                                                task_id: entry.task_id,
-                                                                start_time: entry.start_time,
-                                                                end_time: entry.end_time || new Date().toISOString(),
-                                                            })}
-                                                            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-white/10 text-zinc-400 hover:text-white transition-all"
-                                                            title="Edit entry"
-                                                        >
-                                                            <Edit2 size={14} />
-                                                        </button>
+                                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100">
+                                                            <button
+                                                                onClick={() => setEditEntry({
+                                                                    id: entry.id,
+                                                                    task_id: entry.task_id,
+                                                                    start_time: entry.start_time,
+                                                                    end_time: entry.end_time || new Date().toISOString(),
+                                                                })}
+                                                                className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-all"
+                                                                title="Edit entry"
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => deleteEntry(entry.id)}
+                                                                className="p-1.5 rounded-lg hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-all"
+                                                                title="Delete entry"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             )

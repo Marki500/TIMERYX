@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { CustomSelect } from '@/components/ui/CustomSelect'
+import { useToast } from '@/stores/useToast'
 
 export interface EntryToEdit {
     id: string
@@ -26,6 +27,7 @@ interface EditTimeEntryDialogProps {
 export function EditTimeEntryDialog({ isOpen, onClose, entry, onSaved }: EditTimeEntryDialogProps) {
     const { tasks } = useTaskStore()
     const { projects } = useProjectStore()
+    const { addToast } = useToast()
 
     const [selectedTaskId, setSelectedTaskId] = useState('')
     const [date, setDate] = useState('')
@@ -68,7 +70,10 @@ export function EditTimeEntryDialog({ isOpen, onClose, entry, onSaved }: EditTim
 
         setIsSubmitting(false)
 
-        if (!error) {
+        if (error) {
+            addToast('Failed to save changes. Please try again.', 'error')
+        } else {
+            addToast('Time entry updated.', 'success')
             onSaved()
             onClose()
         }

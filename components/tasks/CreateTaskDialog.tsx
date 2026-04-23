@@ -40,6 +40,7 @@ export function CreateTaskDialog(props: CreateTaskDialogProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showPriorityDropdown, setShowPriorityDropdown] = useState(false)
     const [showProjectDropdown, setShowProjectDropdown] = useState(false) // New state
+    const [projectSearch, setProjectSearch] = useState('')
 
     // Hydration fix for Portal
     useEffect(() => {
@@ -258,6 +259,7 @@ export function CreateTaskDialog(props: CreateTaskDialogProps) {
                                                 e.stopPropagation()
                                                 setShowProjectDropdown(!showProjectDropdown)
                                                 setShowPriorityDropdown(false)
+                                                setProjectSearch('')
                                             }}
                                             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-zinc-300 transition-colors border border-transparent hover:border-white/10"
                                         >
@@ -267,28 +269,45 @@ export function CreateTaskDialog(props: CreateTaskDialogProps) {
                                                 : 'Select Project'}
                                         </button>
                                         {showProjectDropdown && (
-                                            <div className="absolute top-full left-0 mt-2 w-48 bg-[#18181b] border border-white/10 rounded-xl shadow-xl overflow-hidden z-20 max-h-60 overflow-y-auto">
-                                                {projects.length === 0 ? (
-                                                    <div className="px-4 py-2 text-sm text-zinc-500">No projects found</div>
-                                                ) : (
-                                                    projects.map((project) => (
-                                                        <button
-                                                            key={project.id}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setSelectedProjectId(project.id)
-                                                                setShowProjectDropdown(false)
-                                                            }}
-                                                            className="w-full text-left px-4 py-2 text-sm text-zinc-400 hover:bg-white/5 hover:text-white flex items-center gap-2"
-                                                        >
-                                                            <div
-                                                                className="w-2 h-2 rounded-full"
-                                                                style={{ backgroundColor: project.color }}
-                                                            />
-                                                            {project.name}
-                                                        </button>
-                                                    ))
-                                                )}
+                                            <div className="absolute top-full left-0 mt-2 w-52 bg-[#18181b] border border-white/10 rounded-xl shadow-xl overflow-hidden z-20">
+                                                <div className="p-2 border-b border-white/5">
+                                                    <input
+                                                        autoFocus
+                                                        type="text"
+                                                        value={projectSearch}
+                                                        onChange={(e) => setProjectSearch(e.target.value)}
+                                                        placeholder="Search projects..."
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-primary-500/50"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                </div>
+                                                <div className="max-h-48 overflow-y-auto">
+                                                    {projects.length === 0 ? (
+                                                        <div className="px-4 py-2 text-sm text-zinc-500">No projects found</div>
+                                                    ) : (() => {
+                                                        const filtered = projects.filter(p => p.name.toLowerCase().includes(projectSearch.toLowerCase()))
+                                                        return filtered.length === 0 ? (
+                                                            <div className="px-4 py-2 text-sm text-zinc-500">No matches</div>
+                                                        ) : filtered.map((project) => (
+                                                            <button
+                                                                key={project.id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setSelectedProjectId(project.id)
+                                                                    setShowProjectDropdown(false)
+                                                                    setProjectSearch('')
+                                                                }}
+                                                                className="w-full text-left px-4 py-2 text-sm text-zinc-400 hover:bg-white/5 hover:text-white flex items-center gap-2"
+                                                            >
+                                                                <div
+                                                                    className="w-2 h-2 rounded-full shrink-0"
+                                                                    style={{ backgroundColor: project.color }}
+                                                                />
+                                                                {project.name}
+                                                            </button>
+                                                        ))
+                                                    })()}
+                                                </div>
                                             </div>
                                         )}
                                     </div>

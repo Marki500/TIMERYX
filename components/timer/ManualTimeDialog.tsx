@@ -8,6 +8,7 @@ import { useTaskStore } from '@/stores/useTaskStore'
 import { useTimerStore } from '@/stores/useTimerStore'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { CustomSelect } from '@/components/ui/CustomSelect'
+import { useToast } from '@/stores/useToast'
 
 interface ManualTimeDialogProps {
     isOpen: boolean
@@ -20,6 +21,7 @@ export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId, preSelect
     const { tasks, fetchTasks } = useTaskStore()
     const { projects } = useProjectStore()
     const { addManualEntry } = useTimerStore()
+    const { addToast } = useToast()
 
     const [selectedTaskId, setSelectedTaskId] = useState(preSelectedTaskId || '')
     const [date, setDate] = useState(preSelectedDate || new Date().toISOString().split('T')[0])
@@ -51,6 +53,7 @@ export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId, preSelect
 
         try {
             await addManualEntry(selectedTaskId, totalSeconds, date)
+            addToast('Time logged successfully.', 'success')
             onClose()
             // Reset form
             setHours('0')
@@ -60,6 +63,7 @@ export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId, preSelect
             }
         } catch (error) {
             console.error('Failed to add manual entry:', error)
+            addToast('Failed to log time. Please try again.', 'error')
         } finally {
             setIsSubmitting(false)
         }

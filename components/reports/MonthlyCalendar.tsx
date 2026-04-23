@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, X, Edit2, Plus, CheckSquare } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, X, Edit2, Plus, CheckSquare, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     format,
@@ -21,6 +21,7 @@ import { formatDurationShort } from '@/lib/utils/formatDuration'
 import { EditTimeEntryDialog, EntryToEdit } from '@/components/reports/EditTimeEntryDialog'
 import { ManualTimeDialog } from '@/components/timer/ManualTimeDialog'
 import { useTaskStore } from '@/stores/useTaskStore'
+import { useToast } from '@/stores/useToast'
 
 interface DayEntry {
     id: string
@@ -46,6 +47,7 @@ export function MonthlyCalendar() {
     const [pendingLogDate, setPendingLogDate] = useState<string | null>(null)
     const addMenuRef = useRef<HTMLDivElement>(null)
     const { openCreateModal, tasks } = useTaskStore()
+    const { addToast } = useToast()
     const prevTasksLengthRef = useRef(tasks.length)
 
     // When a task is created while waiting to log time, auto-open ManualTimeDialog with it
@@ -67,35 +69,34 @@ export function MonthlyCalendar() {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    useEffect(() => {
-        async function fetchMonthData() {
-            setIsLoading(true)
-            const supabase = createClient()
+    const fetchMonthData = async () => {
+        setIsLoading(true)
+        const supabase = createClient()
 
-            const monthStart = startOfMonth(currentDate)
-            const monthEnd = endOfMonth(currentDate)
+        const monthStart = startOfMonth(currentDate)
+        const monthEnd = endOfMonth(currentDate)
 
-            const { data, error } = await supabase
-                .from('time_entries')
-                .select('start_time, end_time')
-                .gte('start_time', monthStart.toISOString())
-                .lte('start_time', monthEnd.toISOString())
+        const { data, error } = await supabase
+            .from('time_entries')
+            .select('start_time, end_time')
+            .gte('start_time', monthStart.toISOString())
+            .lte('start_time', monthEnd.toISOString())
 
-            if (!error && data) {
-                const hoursMap: Record<string, number> = {}
-                data.forEach((entry: any) => {
-                    if (!entry.end_time) return
-                    const startDate = new Date(entry.start_time)
-                    const dayKey = format(startDate, 'yyyy-MM-dd')
-                    const durationInHours = Math.max(0, (new Date(entry.end_time).getTime() - startDate.getTime()) / 3600000)
-                    hoursMap[dayKey] = (hoursMap[dayKey] || 0) + durationInHours
-                })
-                setDailyHours(hoursMap)
-            }
-            setIsLoading(false)
+        if (!error && data) {
+            const hoursMap: Record<string, number> = {}
+            data.forEach((entry: any) => {
+                if (!entry.end_time) return
+                const startDate = new Date(entry.start_time)
+                const dayKey = format(startDate, 'yyyy-MM-dd')
+                const durationInHours = Math.max(0, (new Date(entry.end_time).getTime() - startDate.getTime()) / 3600000)
+                hoursMap[dayKey] = (hoursMap[dayKey] || 0) + durationInHours
+            })
+            setDailyHours(hoursMap)
         }
-        fetchMonthData()
-    }, [currentDate])
+        setIsLoading(false)
+    }
+
+    useEffect(() => { fetchMonthData() }, [currentDate])
 
     async function handleDayClick(day: Date) {
         if (selectedDay && isSameDay(day, selectedDay)) {
@@ -145,6 +146,18 @@ export function MonthlyCalendar() {
         }
 
         setIsDayLoading(false)
+    }
+
+    const deleteEntry = async (id: string) => {
+        const supabase = createClient()
+        const { error } = await supabase.from('time_entries').delete().eq('id', id)
+        if (error) {
+            addToast('Failed to delete entry.', 'error')
+        } else {
+            addToast('Entry deleted.', 'success')
+            if (selectedDay) await handleDayClick(selectedDay)
+            await fetchMonthData()
+        }
     }
 
     const nextMonth = () => { setCurrentDate(addMonths(currentDate, 1)); setSelectedDay(null) }
@@ -314,14 +327,22 @@ export function MonthlyCalendar() {
                                                 <p className="text-xs text-zinc-500">{entry.project_name}</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3 shrink-0 ml-4">
+                                        <div className="flex items-center gap-2 shrink-0 ml-4">
                                             <p className="text-sm font-mono text-zinc-400">{formatDurationShort(entry.duration)}</p>
-                                            <button
-                                                onClick={() => setEditEntry({ id: entry.id, task_id: entry.task_id, start_time: entry.start_time, end_time: entry.end_time })}
-                                                className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-white/10 text-zinc-400 hover:text-white transition-all"
-                                            >
-                                                <Edit2 size={13} />
-                                            </button>
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                                                <button
+                                                    onClick={() => setEditEntry({ id: entry.id, task_id: entry.task_id, start_time: entry.start_time, end_time: entry.end_time })}
+                                                    className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-all"
+                                                >
+                                                    <Edit2 size={13} />
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteEntry(entry.id)}
+                                                    className="p-1.5 rounded-lg hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-all"
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))
@@ -333,7 +354,11 @@ export function MonthlyCalendar() {
 
             <ManualTimeDialog
                 isOpen={!!addDate}
-                onClose={() => setAddDate(null)}
+                onClose={async () => {
+                    setAddDate(null)
+                    if (selectedDay) await handleDayClick(selectedDay)
+                    await fetchMonthData()
+                }}
                 preSelectedDate={addDate || undefined}
             />
 
@@ -344,6 +369,7 @@ export function MonthlyCalendar() {
                 onSaved={async () => {
                     setEditEntry(null)
                     if (selectedDay) await handleDayClick(selectedDay)
+                    await fetchMonthData()
                 }}
             />
         </div>
