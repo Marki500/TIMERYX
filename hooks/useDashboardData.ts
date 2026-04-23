@@ -58,10 +58,10 @@ export function useDashboardData() {
             startOfWeek.setDate(todayDate.getDate() - daysSinceMonday)
             startOfWeek.setHours(0, 0, 0, 0)
 
-            // Fetch time entries
+            // Fetch time entries with tasks joined in a single query
             const { data: entries, error: entriesError } = await (supabase
                 .from('time_entries')
-                .select('*')
+                .select('*, task:tasks(id, title, status)')
                 .eq('user_id', user.id)
                 .gte('start_time', startOfWeek.toISOString())
                 .order('start_time', { ascending: false }) as any)
@@ -71,17 +71,12 @@ export function useDashboardData() {
             }
 
             if (entries && entries.length > 0) {
-                // Get unique task IDs
-                const taskIds = [...new Set(entries.map((e: any) => e.task_id).filter(Boolean))] as string[]
-
-                // Fetch tasks separately
-                const { data: tasks } = await (supabase
-                    .from('tasks')
-                    .select('id, title, status')
-                    .in('id', taskIds) as any)
-
-                // Create a map of task_id -> task
-                const taskMap = new Map(tasks?.map((t: any) => [t.id, t]) || []) as Map<string, any>
+                // Build task map from joined data (no extra query needed)
+                const taskMap = new Map(
+                    entries
+                        .filter((e: any) => e.task)
+                        .map((e: any) => [e.task_id, e.task])
+                ) as Map<string, any>
 
                 // Aggregate by day for weekly chart (Monday to Sunday)
                 const dayMap = new Map<string, number>()
@@ -141,11 +136,14 @@ export function useDashboardData() {
                 setRecentEntries(recent)
 
                 // Calculate productivity stats
-                // 1. Current Streak (consecutive days with logged time)
+                // 1. Current Streak — limited to last 90 days to avoid unbounded query
+                const ninetyDaysAgo = new Date()
+                ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
                 const { data: allEntries } = await supabase
                     .from('time_entries')
                     .select('start_time')
                     .eq('user_id', user.id)
+                    .gte('start_time', ninetyDaysAgo.toISOString())
                     .order('start_time', { ascending: false })
 
                 let streak = 0

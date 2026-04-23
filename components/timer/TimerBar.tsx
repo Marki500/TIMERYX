@@ -1,18 +1,12 @@
 'use client'
 
-import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Pause, StopCircle } from 'lucide-react'
 import { useTimerStore } from '@/stores/useTimerStore'
 import { cn } from '@/lib/utils'
 
 export function TimerBar() {
-    const { activeEntry, duration, fetchActiveTimer, stopTimer, tick, isLoading, taskTitle } = useTimerStore()
-
-    // Initial fetch and interval
-    useEffect(() => {
-        fetchActiveTimer()
-    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    const { activeEntry, duration, stopTimer, isLoading, taskTitle } = useTimerStore()
 
     const formatTime = (seconds: number) => {
         const h = Math.floor(seconds / 3600)

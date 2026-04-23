@@ -8,13 +8,8 @@ import { formatDurationShort } from '@/lib/utils/formatDuration'
 import { cn } from '@/lib/utils'
 
 export function ActiveTimer() {
-    const { activeEntry, taskTitle, duration, isPaused, pauseTimer, resumeTimer, stopTimer, tick, loadFromStorage } = useTimerStore()
+    const { activeEntry, taskTitle, duration, isPaused, pauseTimer, resumeTimer, stopTimer, tick } = useTimerStore()
     const [isMinimized, setIsMinimized] = useState(false)
-
-    // Load timer from storage on mount
-    useEffect(() => {
-        loadFromStorage()
-    }, [loadFromStorage])
 
     // Tick every second
     useEffect(() => {

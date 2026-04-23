@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ManualTimeDialog } from '@/components/timer/ManualTimeDialog'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useUserStore } from '@/stores/useUserStore'
+import { useToast } from '@/stores/useToast'
 import { cn } from '@/lib/utils'
 import { Database } from '@/types/supabase'
 import { staggerContainer, staggerItem } from '@/lib/animations'
@@ -352,13 +353,16 @@ export function TaskTable() {
                         try {
                             await useTaskStore.getState().deleteTask(deletingTaskId)
                             setDeletingTaskId(null)
+                            useToast.getState().addToast('Task deleted', 'success')
                         } catch (error: any) {
-                            alert(error.message)
+                            useToast.getState().addToast(error.message, 'error')
                         }
                     }
                 }}
                 title="Delete Task"
                 message="Are you sure you want to delete this task? This action cannot be undone."
+                confirmLabel="Delete"
+                isDangerous
             />
 
             <ManualTimeDialog

@@ -3,8 +3,6 @@
 import { create } from 'zustand'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/supabase'
-import { useTaskStore } from './useTaskStore'
-import { useDashboardStore } from './useDashboardStore'
 
 type TimeEntry = Database['public']['Tables']['time_entries']['Row']
 
@@ -28,6 +26,25 @@ interface TimerState {
 }
 
 const STORAGE_KEY = 'timeryx_active_timer'
+
+// Callback registry — decouples timer store from task/dashboard stores
+type RefreshCallback = () => void
+type TaskUpdateCallback = (taskId: string, addedSeconds: number) => void
+
+const refreshCallbacks = new Set<RefreshCallback>()
+const taskUpdateCallbacks = new Set<TaskUpdateCallback>()
+
+export function registerTimerSyncCallbacks(
+    onRefresh: RefreshCallback,
+    onTaskUpdate: TaskUpdateCallback
+) {
+    refreshCallbacks.add(onRefresh)
+    taskUpdateCallbacks.add(onTaskUpdate)
+    return () => {
+        refreshCallbacks.delete(onRefresh)
+        taskUpdateCallbacks.delete(onTaskUpdate)
+    }
+}
 
 export const useTimerStore = create<TimerState>((set, get) => ({
     activeEntry: null,
@@ -137,15 +154,10 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             localStorage.removeItem(STORAGE_KEY)
         }
 
-        // Optimistically update the specific task's duration in TaskStore if we know the ID
+        // Notify registered listeners to update task duration optimistically
         const taskId = previousState.activeEntry?.task_id
         if (taskId) {
-            const taskStore = useTaskStore.getState()
-            const task = taskStore.tasks.find(t => t.id === taskId)
-            if (task) {
-                const newTotalDuration = (task.total_duration || 0) + previousState.duration
-                taskStore.updateTask(taskId, { total_duration: newTotalDuration })
-            }
+            taskUpdateCallbacks.forEach(cb => cb(taskId, previousState.duration))
         }
 
         const supabase = createClient()
@@ -176,13 +188,9 @@ export const useTimerStore = create<TimerState>((set, get) => ({
                 }
             }
         } else {
-            // Refresh tasks in background to ensure sync (preserve current filter)
-            const currentProjectId = useTaskStore.getState().currentProjectId
-            useTaskStore.getState().fetchTasks(currentProjectId || undefined)
+            // Notify registered listeners to refresh data
+            refreshCallbacks.forEach(cb => cb())
         }
-
-        // Trigger dashboard refresh silently in background
-        useDashboardStore.getState().triggerRefresh()
     },
 
     pauseTimer: () => {
@@ -303,12 +311,8 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             throw error
         }
 
-        // Refresh tasks to update total_duration (preserve current project filter)
-        const currentProjectId = useTaskStore.getState().currentProjectId
-        await useTaskStore.getState().fetchTasks(currentProjectId || undefined)
-
-        // Trigger dashboard refresh
-        useDashboardStore.getState().triggerRefresh()
+        // Notify registered listeners to refresh data
+        refreshCallbacks.forEach(cb => cb())
     },
 
     setTaskDuration: async (taskId, newTotalSeconds, targetDate) => {
@@ -381,8 +385,10 @@ export const useTimerStore = create<TimerState>((set, get) => ({
                 throw insertError
             }
         } else {
-            // REDUCING TIME: trim entries from most recent, shortening end_time
+            // REDUCING TIME: collect entries to delete/shorten, then execute in bulk
             let remaining = Math.abs(diff)
+            const idsToDelete: string[] = []
+            let entryToShorten: { id: string; newEndTime: string } | null = null
 
             for (const entry of (entries || [])) {
                 if (remaining <= 0) break
@@ -391,27 +397,33 @@ export const useTimerStore = create<TimerState>((set, get) => ({
                 const entryDuration = (new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / 1000
 
                 if (entryDuration <= remaining) {
-                    // This entire entry needs to be removed
-                    await (supabase.from('time_entries') as any)
-                        .delete()
-                        .eq('id', entry.id)
+                    idsToDelete.push(entry.id)
                     remaining -= entryDuration
                 } else {
-                    // Shorten this entry's end_time by the remaining amount
                     const newEndTime = new Date(
                         new Date(entry.end_time).getTime() - remaining * 1000
                     )
-                    await (supabase.from('time_entries') as any)
-                        .update({ end_time: newEndTime.toISOString() })
-                        .eq('id', entry.id)
+                    entryToShorten = { id: entry.id, newEndTime: newEndTime.toISOString() }
                     remaining = 0
                 }
             }
+
+            // Single bulk delete instead of N sequential deletes
+            if (idsToDelete.length > 0) {
+                await (supabase.from('time_entries') as any)
+                    .delete()
+                    .in('id', idsToDelete)
+            }
+
+            // Single update for the shortened entry
+            if (entryToShorten) {
+                await (supabase.from('time_entries') as any)
+                    .update({ end_time: entryToShorten.newEndTime })
+                    .eq('id', entryToShorten.id)
+            }
         }
 
-        // Refresh tasks to update computed total_duration
-        const currentProjectId = useTaskStore.getState().currentProjectId
-        await useTaskStore.getState().fetchTasks(currentProjectId || undefined)
-        useDashboardStore.getState().triggerRefresh()
+        // Notify registered listeners to refresh data
+        refreshCallbacks.forEach(cb => cb())
     }
 }))

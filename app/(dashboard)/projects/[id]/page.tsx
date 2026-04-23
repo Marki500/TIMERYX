@@ -13,6 +13,7 @@ import { ViewSwitcher } from '@/components/tasks/ViewSwitcher'
 import { InviteClientModal } from '@/components/projects/InviteClientModal'
 import { ProjectChat } from '@/components/chat/ProjectChat'
 import { formatDuration } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 
 export default function ProjectDetailsPage() {
     const params = useParams()
@@ -22,6 +23,7 @@ export default function ProjectDetailsPage() {
     const { projects } = useProjectStore()
     const { tasks, fetchTasks, viewMode, openCreateModal } = useTaskStore()
     const [isInviteClientOpen, setIsInviteClientOpen] = useState(false)
+    const [monthlySeconds, setMonthlySeconds] = useState(0)
 
     const handleDateClick = (date: Date) => {
         openCreateModal(date, projectId)
@@ -42,6 +44,34 @@ export default function ProjectDetailsPage() {
             fetchTasks(projectId)
         }
     }, [projectId, fetchTasks])
+
+    // Fetch real monthly time from time_entries filtered by current month
+    useEffect(() => {
+        if (!projectId) return
+        const supabase = createClient()
+
+        async function fetchMonthlyTime() {
+            const now = new Date()
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+            const { data } = await (supabase
+                .from('time_entries')
+                .select('start_time, end_time, task:tasks!inner(project_id)')
+                .eq('task.project_id', projectId)
+                .gte('start_time', startOfMonth)
+                .not('end_time', 'is', null) as any)
+
+            if (data) {
+                const total = data.reduce((acc: number, entry: any) => {
+                    const dur = (new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / 1000
+                    return acc + Math.max(0, dur)
+                }, 0)
+                setMonthlySeconds(total)
+            }
+        }
+
+        fetchMonthlyTime()
+    }, [projectId])
 
     // Show loading only if projects array is empty (still loading from layout)
     if (projects.length === 0) {
@@ -123,54 +153,35 @@ export default function ProjectDetailsPage() {
                         <span className="font-medium text-sm">This Month</span>
                     </div>
                     <div className="text-3xl font-bold text-white mb-1 font-mono">
-                        {(() => {
-                            // Calculate this month's time
-                            const now = new Date()
-                            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-                            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
-
-                            // Filter tasks for this month based on their time entries
-                            // Note: This is an approximation. For accurate monthly time, 
-                            // we'd need to query time_entries directly filtered by date
-                            const monthlySeconds = projectTasks.reduce((total, task) => {
-                                // This is a simplified calculation
-                                // In a real scenario, you'd want to sum time_entries.duration 
-                                // where created_at is within the current month
-                                return total + (task.total_duration || 0)
-                            }, 0)
-
-                            const monthlyHours = monthlySeconds / 3600
-                            const budgetHours = project.budget_hours_monthly || 0
-                            const percentage = budgetHours > 0 ? (monthlyHours / budgetHours) * 100 : 0
-
-                            return (
-                                <>
-                                    {formatDuration(monthlySeconds)}
-                                    {budgetHours > 0 && (
-                                        <>
-                                            <div className="text-xs text-zinc-500 mt-2 mb-1">
-                                                {monthlyHours.toFixed(1)}h / {budgetHours}h budget
-                                            </div>
-                                            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full transition-all rounded-full ${percentage > 100 ? 'bg-red-500' :
-                                                        percentage > 80 ? 'bg-orange-500' :
-                                                            'bg-primary-500'
-                                                        }`}
-                                                    style={{ width: `${Math.min(percentage, 100)}%` }}
-                                                />
-                                            </div>
-                                            {percentage > 100 && (
-                                                <div className="text-xs text-red-400 mt-1">
-                                                    {(percentage - 100).toFixed(0)}% over budget
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-                                </>
-                            )
-                        })()}
+                        {formatDuration(monthlySeconds)}
                     </div>
+                    {(() => {
+                        const monthlyHours = monthlySeconds / 3600
+                        const budgetHours = project.budget_hours_monthly || 0
+                        if (budgetHours <= 0) return null
+                        const percentage = (monthlyHours / budgetHours) * 100
+                        return (
+                            <>
+                                <div className="text-xs text-zinc-500 mt-2 mb-1">
+                                    {monthlyHours.toFixed(1)}h / {budgetHours}h budget
+                                </div>
+                                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full transition-all rounded-full ${percentage > 100 ? 'bg-red-500' :
+                                            percentage > 80 ? 'bg-orange-500' :
+                                                'bg-primary-500'
+                                            }`}
+                                        style={{ width: `${Math.min(percentage, 100)}%` }}
+                                    />
+                                </div>
+                                {percentage > 100 && (
+                                    <div className="text-xs text-red-400 mt-1">
+                                        {(percentage - 100).toFixed(0)}% over budget
+                                    </div>
+                                )}
+                            </>
+                        )
+                    })()}
                 </div>
 
                 <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/5 backdrop-blur-sm">
