@@ -272,16 +272,16 @@ export function MonthlyCalendar() {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
 
-        <EditTimeEntryDialog
-            isOpen={!!editEntry}
-            onClose={() => setEditEntry(null)}
-            entry={editEntry}
-            onSaved={async () => {
-                setEditEntry(null)
-                if (selectedDay) await handleDayClick(selectedDay)
-            }}
-        />
+            <EditTimeEntryDialog
+                isOpen={!!editEntry}
+                onClose={() => setEditEntry(null)}
+                entry={editEntry}
+                onSaved={async () => {
+                    setEditEntry(null)
+                    if (selectedDay) await handleDayClick(selectedDay)
+                }}
+            />
+        </div>
     )
 }
