@@ -13,25 +13,27 @@ interface ManualTimeDialogProps {
     isOpen: boolean
     onClose: () => void
     preSelectedTaskId?: string
+    preSelectedDate?: string
 }
 
-export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId }: ManualTimeDialogProps) {
+export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId, preSelectedDate }: ManualTimeDialogProps) {
     const { tasks } = useTaskStore()
     const { projects } = useProjectStore()
     const { addManualEntry } = useTimerStore()
 
     const [selectedTaskId, setSelectedTaskId] = useState(preSelectedTaskId || '')
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+    const [date, setDate] = useState(preSelectedDate || new Date().toISOString().split('T')[0])
     const [hours, setHours] = useState('0')
     const [minutes, setMinutes] = useState('30')
     const [isSubmitting, setIsSubmitting] = useState(false)
 
-    // Update selectedTaskId when preSelectedTaskId changes
     useEffect(() => {
-        if (preSelectedTaskId) {
-            setSelectedTaskId(preSelectedTaskId)
-        }
+        if (preSelectedTaskId) setSelectedTaskId(preSelectedTaskId)
     }, [preSelectedTaskId])
+
+    useEffect(() => {
+        if (preSelectedDate) setDate(preSelectedDate)
+    }, [preSelectedDate])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()

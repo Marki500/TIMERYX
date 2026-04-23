@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, X, Edit2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     format,
@@ -18,9 +18,11 @@ import {
     isSameDay
 } from 'date-fns'
 import { formatDurationShort } from '@/lib/utils/formatDuration'
+import { EditTimeEntryDialog, EntryToEdit } from '@/components/reports/EditTimeEntryDialog'
 
 interface DayEntry {
     id: string
+    task_id: string
     start_time: string
     end_time: string
     duration: number
@@ -36,6 +38,7 @@ export function MonthlyCalendar() {
     const [selectedDay, setSelectedDay] = useState<Date | null>(null)
     const [dayEntries, setDayEntries] = useState<DayEntry[]>([])
     const [isDayLoading, setIsDayLoading] = useState(false)
+    const [editEntry, setEditEntry] = useState<EntryToEdit | null>(null)
 
     useEffect(() => {
         async function fetchMonthData() {
@@ -103,6 +106,7 @@ export function MonthlyCalendar() {
         if (data) {
             const entries: DayEntry[] = data.map((e: any) => ({
                 id: e.id,
+                task_id: e.task_id,
                 start_time: e.start_time,
                 end_time: e.end_time,
                 duration: (new Date(e.end_time).getTime() - new Date(e.start_time).getTime()) / 1000,
@@ -244,22 +248,22 @@ export function MonthlyCalendar() {
                                 <div className="px-5 py-8 text-center text-zinc-500 text-sm">No time entries for this day.</div>
                             ) : (
                                 dayEntries.map((entry) => (
-                                    <div key={entry.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
+                                    <div key={entry.id} className="flex items-center justify-between px-5 py-3 hover:bg-white/[0.02] transition-colors group">
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <div
-                                                className="w-2.5 h-2.5 rounded-full shrink-0"
-                                                style={{ backgroundColor: entry.project_color }}
-                                            />
+                                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.project_color }} />
                                             <div className="min-w-0">
                                                 <p className="text-sm font-medium text-white truncate">{entry.task_title}</p>
                                                 <p className="text-xs text-zinc-500">{entry.project_name}</p>
                                             </div>
                                         </div>
-                                        <div className="text-right shrink-0 ml-4">
-                                            <p className="text-sm font-mono text-zinc-300">{formatDurationShort(entry.duration)}</p>
-                                            <p className="text-xs text-zinc-600">
-                                                {format(new Date(entry.start_time), 'HH:mm')} – {format(new Date(entry.end_time), 'HH:mm')}
-                                            </p>
+                                        <div className="flex items-center gap-3 shrink-0 ml-4">
+                                            <p className="text-sm font-mono text-zinc-400">{formatDurationShort(entry.duration)}</p>
+                                            <button
+                                                onClick={() => setEditEntry({ id: entry.id, task_id: entry.task_id, start_time: entry.start_time, end_time: entry.end_time })}
+                                                className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-white/10 text-zinc-400 hover:text-white transition-all"
+                                            >
+                                                <Edit2 size={13} />
+                                            </button>
                                         </div>
                                     </div>
                                 ))
@@ -269,5 +273,15 @@ export function MonthlyCalendar() {
                 )}
             </AnimatePresence>
         </div>
+
+        <EditTimeEntryDialog
+            isOpen={!!editEntry}
+            onClose={() => setEditEntry(null)}
+            entry={editEntry}
+            onSaved={async () => {
+                setEditEntry(null)
+                if (selectedDay) await handleDayClick(selectedDay)
+            }}
+        />
     )
 }
