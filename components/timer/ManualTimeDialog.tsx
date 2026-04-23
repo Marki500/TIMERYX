@@ -17,7 +17,7 @@ interface ManualTimeDialogProps {
 }
 
 export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId, preSelectedDate }: ManualTimeDialogProps) {
-    const { tasks } = useTaskStore()
+    const { tasks, fetchTasks } = useTaskStore()
     const { projects } = useProjectStore()
     const { addManualEntry } = useTimerStore()
 
@@ -26,6 +26,13 @@ export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId, preSelect
     const [hours, setHours] = useState('0')
     const [minutes, setMinutes] = useState('30')
     const [isSubmitting, setIsSubmitting] = useState(false)
+
+    // Load tasks if store is empty (e.g. opening from reports page without visiting a project first)
+    useEffect(() => {
+        if (isOpen && tasks.length === 0) {
+            fetchTasks()
+        }
+    }, [isOpen])
 
     useEffect(() => {
         if (preSelectedTaskId) setSelectedTaskId(preSelectedTaskId)
@@ -182,7 +189,6 @@ export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId, preSelect
                                                 type="number"
                                                 min="0"
                                                 max="59"
-                                                step="5"
                                                 value={minutes}
                                                 onChange={(e) => setMinutes(e.target.value)}
                                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-center font-mono text-lg focus:outline-none focus:border-primary-500/50 focus:bg-white/10 transition-all"

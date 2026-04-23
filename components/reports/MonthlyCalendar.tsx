@@ -43,8 +43,19 @@ export function MonthlyCalendar() {
     const [editEntry, setEditEntry] = useState<EntryToEdit | null>(null)
     const [addDate, setAddDate] = useState<string | null>(null)
     const [addMenuOpen, setAddMenuOpen] = useState(false)
+    const [pendingLogDate, setPendingLogDate] = useState<string | null>(null)
     const addMenuRef = useRef<HTMLDivElement>(null)
-    const { openCreateModal } = useTaskStore()
+    const { openCreateModal, tasks } = useTaskStore()
+    const prevTasksLengthRef = useRef(tasks.length)
+
+    // When a task is created while waiting to log time, auto-open ManualTimeDialog with it
+    useEffect(() => {
+        if (pendingLogDate && tasks.length > prevTasksLengthRef.current) {
+            setAddDate(pendingLogDate)
+            setPendingLogDate(null)
+        }
+        prevTasksLengthRef.current = tasks.length
+    }, [tasks.length, pendingLogDate])
 
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -268,7 +279,7 @@ export function MonthlyCalendar() {
                                                 Log time entry
                                             </button>
                                             <button
-                                                onClick={() => { openCreateModal(selectedDay!, undefined); setAddMenuOpen(false) }}
+                                                onClick={() => { setPendingLogDate(format(selectedDay!, 'yyyy-MM-dd')); openCreateModal(selectedDay!, undefined); setAddMenuOpen(false) }}
                                                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors text-left"
                                             >
                                                 <CheckSquare size={14} className="text-green-400 shrink-0" />

@@ -157,7 +157,7 @@ export function EditTimeEntryDialog({ isOpen, onClose, entry, onSaved }: EditTim
                                         </div>
                                         <div className="space-y-1">
                                             <input
-                                                type="number" min="0" max="59" step="5" value={minutes}
+                                                type="number" min="0" max="59" value={minutes}
                                                 onChange={(e) => setMinutes(e.target.value)}
                                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-center font-mono text-lg focus:outline-none focus:border-primary-500/50 focus:bg-white/10 transition-all"
                                             />
