@@ -35,6 +35,7 @@ export function FloatingDock() {
         { href: '/dashboard', icon: LayoutGrid, label: 'Home' },
         { href: '/tasks', icon: CheckSquare, label: 'Tasks' },
         { href: '/projects', icon: Folder, label: 'Projects' },
+        { href: '/timesheet', icon: Clock, label: 'Timesheet' },
         { href: '/reports', icon: PieChart, label: 'Reports' },
         { href: '/settings', icon: Settings, label: 'Settings' },
     ]

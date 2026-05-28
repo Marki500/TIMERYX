@@ -23,7 +23,7 @@ export function MobileNav() {
     const links = [
         { href: '/dashboard', icon: LayoutGrid, label: 'Home' },
         { href: '/tasks', icon: CheckSquare, label: 'Tasks' },
-        { href: '/timer', icon: Clock, label: 'Timer' }, // Or maybe open timer modal?
+        { href: '/timesheet', icon: Clock, label: 'Timesheet' },
         { href: '/projects', icon: Folder, label: 'Projects' },
         { href: '/reports', icon: PieChart, label: 'Stats' },
     ]
