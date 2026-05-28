@@ -96,7 +96,7 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
             const totalMinutes = (h * 60) + m
             const endTime = addMinutes(startTime, totalMinutes)
 
-            const { error } = await supabase.rpc('add_manual_time_entry', {
+            const { error } = await (supabase.rpc as any)('add_manual_time_entry', {
                 p_task_id: selectedTaskId,
                 p_start_time: startTime.toISOString(),
                 p_end_time: endTime.toISOString(),
