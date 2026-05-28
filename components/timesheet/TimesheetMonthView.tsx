@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
     format,
     startOfMonth,
@@ -12,7 +12,7 @@ import {
     isSameMonth,
     isSameDay
 } from 'date-fns'
-import { es } from 'date-fns/locale' // Optional: if we want spanish dates, or just stick to english
+
 import { ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BulkTimeEntryModal } from './BulkTimeEntryModal'
@@ -38,21 +38,21 @@ export function TimesheetMonthView() {
     const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()))
     const [entries, setEntries] = useState<TimeEntry[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const { user } = useUserStore()
-    const supabase = createClient()
+    const { profile } = useUserStore()
+    const supabaseRef = useRef(createClient())
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
-    const fetchEntries = async () => {
-        if (!user) return
+    const fetchEntries = useCallback(async () => {
+        if (!profile) return
 
         setIsLoading(true)
         const start = startOfMonth(currentMonth)
         const end = endOfMonth(currentMonth)
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseRef.current
             .from('time_entries')
             .select(`
                 id, start_time, end_time, description,
@@ -64,7 +64,7 @@ export function TimesheetMonthView() {
                     )
                 )
             `)
-            .eq('user_id', user.id)
+            .eq('user_id', profile.id)
             .gte('start_time', start.toISOString())
             .lte('start_time', end.toISOString())
             .not('end_time', 'is', null) // Only completed entries
@@ -73,11 +73,11 @@ export function TimesheetMonthView() {
             setEntries(data as unknown as TimeEntry[])
         }
         setIsLoading(false)
-    }
+    }, [currentMonth, profile])
 
     useEffect(() => {
         fetchEntries()
-    }, [currentMonth, user])
+    }, [fetchEntries])
 
     const handlePreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
     const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))

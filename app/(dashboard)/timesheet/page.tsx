@@ -1,9 +1,6 @@
-import { TimesheetMonthView } from '@/components/timesheet/TimesheetMonthView'
+'use client'
 
-export const metadata = {
-    title: 'Timesheet | Timeryx',
-    description: 'Manage and review your monthly timesheet.',
-}
+import { TimesheetMonthView } from '@/components/timesheet/TimesheetMonthView'
 
 export default function TimesheetPage() {
     return (

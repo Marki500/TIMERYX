@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Clock, Folder, CheckSquare, Search } from 'lucide-react'
@@ -25,7 +25,7 @@ interface BulkTimeEntryModalProps {
 export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded }: BulkTimeEntryModalProps) {
     const { projects, fetchProjects } = useProjectStore()
     const { currentWorkspace } = useUserStore()
-    const supabase = createClient()
+    const supabaseRef = useRef(createClient())
 
     const [mounted, setMounted] = useState(false)
     const [selectedProjectId, setSelectedProjectId] = useState<string>('')
@@ -67,7 +67,7 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
         }
 
         const fetchProjectTasks = async () => {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseRef.current
                 .from('tasks')
                 .select('id, title')
                 .eq('project_id', selectedProjectId)
@@ -78,8 +78,9 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
             }
         }
 
+        setTaskSearch('')
         fetchProjectTasks()
-    }, [selectedProjectId, supabase])
+    }, [selectedProjectId])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -96,7 +97,7 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
             const totalMinutes = (h * 60) + m
             const endTime = addMinutes(startTime, totalMinutes)
 
-            const { error } = await (supabase.rpc as any)('add_manual_time_entry', {
+            const { error } = await (supabaseRef.current.rpc as any)('add_manual_time_entry', {
                 p_task_id: selectedTaskId,
                 p_start_time: startTime.toISOString(),
                 p_end_time: endTime.toISOString(),
