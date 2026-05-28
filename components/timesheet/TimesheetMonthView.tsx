@@ -44,6 +44,7 @@ export function TimesheetMonthView() {
     const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()))
     const [entries, setEntries] = useState<TimeEntry[]>([])
     const [allTimeHours, setAllTimeHours] = useState<Record<string, number>>({})
+    const [monthlyBreakdown, setMonthlyBreakdown] = useState<Record<string, Record<string, number>>>({})
     const [isLoading, setIsLoading] = useState(true)
     const { profile } = useUserStore()
     const supabaseRef = useRef(createClient())
@@ -98,18 +99,31 @@ export function TimesheetMonthView() {
 
         if (!allEntriesError && allEntries) {
             const hoursMap: Record<string, number> = {}
+            const monthlyBreakdownMap: Record<string, Record<string, number>> = {}
+
             allEntries.forEach((entry: any) => {
                 const projId = entry.tasks?.project_id
                 if (!projId) return
 
-                const start = new Date(entry.start_time).getTime()
-                const end = new Date(entry.end_time).getTime()
-                const durationHours = (end - start) / (1000 * 60 * 60)
+                const entryStart = new Date(entry.start_time)
+                const entryEnd = new Date(entry.end_time)
+                const durationHours = (entryEnd.getTime() - entryStart.getTime()) / (1000 * 60 * 60)
 
+                // All-time sum
                 if (!hoursMap[projId]) hoursMap[projId] = 0
                 hoursMap[projId] += durationHours
+
+                // Monthly sum
+                const year = entryStart.getFullYear()
+                const month = String(entryStart.getMonth() + 1).padStart(2, '0')
+                const monthSortKey = `${year}-${month}`
+
+                if (!monthlyBreakdownMap[projId]) monthlyBreakdownMap[projId] = {}
+                if (!monthlyBreakdownMap[projId][monthSortKey]) monthlyBreakdownMap[projId][monthSortKey] = 0
+                monthlyBreakdownMap[projId][monthSortKey] += durationHours
             })
             setAllTimeHours(hoursMap)
+            setMonthlyBreakdown(monthlyBreakdownMap)
         }
 
         setIsLoading(false)
@@ -189,6 +203,12 @@ export function TimesheetMonthView() {
     const formatAllTimeDuration = (hoursDecimal: number) => {
         const totalMinutes = Math.round(hoursDecimal * 60)
         return formatDuration(totalMinutes)
+    }
+
+    const formatMonthDisplay = (sortKey: string) => {
+        const [year, month] = sortKey.split('-')
+        const date = new Date(parseInt(year), parseInt(month) - 1, 1)
+        return date.toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', { month: 'short', year: 'numeric' })
     }
 
     const dateFnsLocale = locale === 'es' ? es : enUS
@@ -271,6 +291,28 @@ export function TimesheetMonthView() {
                                             {formatAllTimeDuration(allTimeHours[item.id] || 0)}
                                         </span>
                                     </div>
+                                    {/* Monthly breakdown minilist */}
+                                    {Object.keys(monthlyBreakdown[item.id] || {}).length > 0 && (() => {
+                                        const monthlyList = Object.entries(monthlyBreakdown[item.id] || {})
+                                            .sort((a, b) => b[0].localeCompare(a[0])) // latest first
+                                            .slice(0, 3) // limit to latest 3 months
+
+                                        return (
+                                            <div className="mt-1.5 pt-1.5 border-t border-white/5 space-y-1">
+                                                <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider mb-0.5">
+                                                    {locale === 'es' ? 'Historial mensual' : 'Monthly history'}
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    {monthlyList.map(([sortKey, hours]) => (
+                                                        <div key={sortKey} className="flex items-center justify-between text-[10px] text-zinc-400">
+                                                            <span className="capitalize">{formatMonthDisplay(sortKey)}</span>
+                                                            <span className="font-mono text-zinc-300">{formatAllTimeDuration(hours)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )
+                                    })()}
                                 </div>
                             ))}
                         </div>
