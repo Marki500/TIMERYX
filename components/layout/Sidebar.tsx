@@ -43,6 +43,7 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         { icon: CheckSquare, label: 'Tasks', href: '/tasks' },
         { icon: Folder, label: 'Projects', href: '/projects' },
         { icon: Calendar, label: 'Calendar', href: '/calendar' },
+        { icon: Clock, label: 'Timesheet', href: '/timesheet' },
         { href: '/chat', label: 'Messages', icon: MessageSquare },
         { href: '/reports', label: 'Reports', icon: PieChart },
     ]
