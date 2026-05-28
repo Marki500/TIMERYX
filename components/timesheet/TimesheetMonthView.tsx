@@ -83,18 +83,31 @@ export function TimesheetMonthView() {
             setEntries(data as unknown as TimeEntry[])
         }
 
-        // Fetch all-time task durations to calculate all-time project hours
-        const { data: taskDurations } = await supabaseRef.current
-            .from('tasks')
-            .select('project_id, total_duration')
-            .not('project_id', 'is', null)
+        // Fetch all-time time entries to calculate all-time project hours from source of truth
+        const { data: allEntries, error: allEntriesError } = await supabaseRef.current
+            .from('time_entries')
+            .select(`
+                start_time,
+                end_time,
+                tasks (
+                    project_id
+                )
+            `)
+            .eq('user_id', profile.id)
+            .not('end_time', 'is', null)
 
-        if (taskDurations) {
+        if (!allEntriesError && allEntries) {
             const hoursMap: Record<string, number> = {}
-            taskDurations.forEach((task: any) => {
-                const projId = task.project_id
+            allEntries.forEach((entry: any) => {
+                const projId = entry.tasks?.project_id
+                if (!projId) return
+
+                const start = new Date(entry.start_time).getTime()
+                const end = new Date(entry.end_time).getTime()
+                const durationHours = (end - start) / (1000 * 60 * 60)
+
                 if (!hoursMap[projId]) hoursMap[projId] = 0
-                hoursMap[projId] += (task.total_duration || 0) / 3600 // convert seconds to hours
+                hoursMap[projId] += durationHours
             })
             setAllTimeHours(hoursMap)
         }
