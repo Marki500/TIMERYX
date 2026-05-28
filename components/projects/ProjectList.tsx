@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Plus, Folder, Clock, MoreVertical, Trash2, Settings } from 'lucide-react'
+import { Plus, Folder, Clock, MoreVertical, Trash2, Settings, Search } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useUserStore } from '@/stores/useUserStore'
@@ -12,14 +12,17 @@ import { EditProjectDialog } from './EditProjectDialog'
 import { formatDuration } from '@/lib/utils'
 import { ProjectIcon } from '@/components/ui/ProjectIcon'
 import { createClient } from '@/lib/supabase/client'
+import { useTranslation } from '@/stores/useLocaleStore'
 
 export function ProjectList() {
+    const { t, locale } = useTranslation()
     const { projects, fetchProjects, deleteProject, isLoading } = useProjectStore()
     const { currentWorkspace } = useUserStore()
     const { tasks, fetchTasks } = useTaskStore()
     const [isCreateOpen, setIsCreateOpen] = useState(false)
     const [editingProject, setEditingProject] = useState<any>(null)
     const [monthlyHours, setMonthlyHours] = useState<Record<string, number>>({})
+    const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
         if (currentWorkspace) {
@@ -66,20 +69,38 @@ export function ProjectList() {
 
     if (!currentWorkspace) return null
 
+    const filteredProjects = projects.filter((project) =>
+        project.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Projects</h1>
-                    <p className="text-zinc-400">Manage your projects and track progress</p>
+                    <h1 className="text-2xl font-bold text-white">{t('projects.title')}</h1>
+                    <p className="text-zinc-400">
+                        {locale === 'es' ? 'Administra tus proyectos y haz un seguimiento del progreso' : 'Manage your projects and track progress'}
+                    </p>
                 </div>
-                <button
-                    onClick={() => setIsCreateOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors"
-                >
-                    <Plus size={18} />
-                    New Project
-                </button>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                    <div className="relative flex-1 sm:flex-initial">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                        <input
+                            type="text"
+                            placeholder={t('projects.search_placeholder')}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9 pr-4 py-2 w-full sm:w-64 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary-500 transition-colors text-sm"
+                        />
+                    </div>
+                    <button
+                        onClick={() => setIsCreateOpen(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-medium transition-colors shrink-0"
+                    >
+                        <Plus size={18} />
+                        {t('projects.new_project')}
+                    </button>
+                </div>
             </div>
 
             {isLoading && projects.length === 0 ? (
@@ -88,25 +109,31 @@ export function ProjectList() {
                         <div key={i} className="h-48 bg-white/5 rounded-xl animate-pulse" />
                     ))}
                 </div>
-            ) : projects.length === 0 ? (
+            ) : filteredProjects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-white/5 rounded-xl border border-white/10 border-dashed">
                     <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
                         <Folder size={32} className="text-zinc-500" />
                     </div>
-                    <h3 className="text-lg font-medium text-white mb-2">No projects yet</h3>
+                    <h3 className="text-lg font-medium text-white mb-2">
+                        {searchQuery ? t('common.no_projects') : (locale === 'es' ? 'Aún no hay proyectos' : 'No projects yet')}
+                    </h3>
                     <p className="text-zinc-400 mb-6 max-w-sm text-center">
-                        Create your first project to start tracking tasks and time budgets.
+                        {searchQuery
+                            ? (locale === 'es' ? 'Prueba con otra palabra de búsqueda.' : 'Try searching for something else.')
+                            : (locale === 'es' ? 'Crea tu primer proyecto para empezar a realizar un seguimiento de las tareas y los presupuestos de tiempo.' : 'Create your first project to start tracking tasks and time budgets.')}
                     </p>
-                    <button
-                        onClick={() => setIsCreateOpen(true)}
-                        className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
-                    >
-                        Create Project
-                    </button>
+                    {!searchQuery && (
+                        <button
+                            onClick={() => setIsCreateOpen(true)}
+                            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                        >
+                            {t('projects.new_project')}
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {projects.map((project) => (
+                    {filteredProjects.map((project) => (
                         <Link
                             href={`/projects/${project.id}`}
                             key={project.id}
@@ -118,7 +145,9 @@ export function ProjectList() {
                                     <div>
                                         <h3 className="text-white font-medium line-clamp-1">{project.name}</h3>
                                         <span className="text-xs text-zinc-500">
-                                            {project.is_client_visible ? 'Visible to Client' : 'Internal'}
+                                            {project.is_client_visible 
+                                                ? (locale === 'es' ? 'Visible para el cliente' : 'Visible to Client') 
+                                                : (locale === 'es' ? 'Interno' : 'Internal')}
                                         </span>
                                     </div>
                                 </div>
@@ -137,7 +166,7 @@ export function ProjectList() {
                                         onClick={(e) => {
                                             e.preventDefault()
                                             e.stopPropagation()
-                                            confirm('Delete project?') && deleteProject(project.id)
+                                            confirm(locale === 'es' ? '¿Eliminar proyecto?' : 'Delete project?') && deleteProject(project.id)
                                         }}
                                         className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
                                     >
@@ -156,7 +185,7 @@ export function ProjectList() {
                                     return (
                                         <div>
                                             <div className="flex items-center justify-between text-sm mb-2">
-                                                <span className="text-zinc-400">This Month</span>
+                                                <span className="text-zinc-400">{locale === 'es' ? 'Este Mes' : 'This Month'}</span>
                                                 <span className="text-white font-mono">
                                                     {projMonthlyHours.toFixed(1)}h / {budgetHours}h
                                                 </span>
@@ -172,7 +201,7 @@ export function ProjectList() {
                                             </div>
                                             {percentage > 100 && (
                                                 <div className="text-xs text-red-400 mt-1">
-                                                    {(percentage - 100).toFixed(0)}% over
+                                                    {(percentage - 100).toFixed(0)}% {locale === 'es' ? 'excedido' : 'over'}
                                                 </div>
                                             )}
                                         </div>

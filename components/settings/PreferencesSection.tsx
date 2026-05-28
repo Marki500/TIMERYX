@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react'
 import { Save, Layout } from 'lucide-react'
 import { useUserPreferences } from '@/stores/useUserPreferences'
 import { CustomSelect } from '@/components/ui/CustomSelect'
+import { useTranslation } from '@/stores/useLocaleStore'
 
 export function PreferencesSection() {
+    const { t, locale, setLocale } = useTranslation()
     const { preferences, updatePreferences, fetchPreferences } = useUserPreferences()
     const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('24h')
     const [dateFormat, setDateFormat] = useState('DD/MM/YYYY')
@@ -35,8 +37,13 @@ export function PreferencesSection() {
             notifications_enabled: notificationsEnabled
         })
         setIsSaving(false)
-        alert('Preferencias actualizadas correctamente')
+        alert(t('common.saved'))
     }
+
+    const languageOptions = [
+        { value: 'es', label: 'Español' },
+        { value: 'en', label: 'English' }
+    ]
 
     const timeFormatOptions = [
         { value: '12h', label: '12 horas (AM/PM)' },
@@ -57,13 +64,23 @@ export function PreferencesSection() {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-bold text-white mb-4">Preferencias</h3>
+                <h3 className="text-lg font-bold text-white mb-4">{t('settings.preferences')}</h3>
+            </div>
+
+            {/* Language Selection */}
+            <div>
+                <CustomSelect
+                    label={t('settings.language')}
+                    value={locale}
+                    onChange={(value) => setLocale(value as 'es' | 'en')}
+                    options={languageOptions}
+                />
             </div>
 
             {/* Time Format */}
             <div>
                 <CustomSelect
-                    label="Formato de Hora"
+                    label={t('settings.time_format')}
                     value={timeFormat}
                     onChange={(value) => setTimeFormat(value as '12h' | '24h')}
                     options={timeFormatOptions}
@@ -73,7 +90,7 @@ export function PreferencesSection() {
             {/* Date Format */}
             <div>
                 <CustomSelect
-                    label="Formato de Fecha"
+                    label={t('settings.date_format')}
                     value={dateFormat}
                     onChange={setDateFormat}
                     options={dateFormatOptions}
@@ -83,7 +100,7 @@ export function PreferencesSection() {
             {/* First Day of Week */}
             <div>
                 <CustomSelect
-                    label="Primer Día de la Semana"
+                    label={t('settings.first_day')}
                     value={firstDayOfWeek.toString()}
                     onChange={(value) => setFirstDayOfWeek(parseInt(value))}
                     options={firstDayOptions}
@@ -93,8 +110,8 @@ export function PreferencesSection() {
             {/* Notifications */}
             <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
                 <div>
-                    <p className="text-white font-medium">Notificaciones</p>
-                    <p className="text-zinc-500 text-sm">Recibir notificaciones de tareas y recordatorios</p>
+                    <p className="text-white font-medium">{t('settings.notifications')}</p>
+                    <p className="text-zinc-500 text-sm">{t('settings.notifications_desc')}</p>
                 </div>
                 <button
                     onClick={() => setNotificationsEnabled(!notificationsEnabled)}
@@ -112,14 +129,14 @@ export function PreferencesSection() {
             <div className="pt-4 border-t border-white/10">
                 <div className="flex items-center gap-2 mb-4">
                     <Layout className="w-5 h-5 text-primary-400" />
-                    <h4 className="text-md font-bold text-white">Tarjetas del Dashboard</h4>
+                    <h4 className="text-md font-bold text-white">{t('settings.dashboard_cards')}</h4>
                 </div>
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                     <p className="text-zinc-400 text-sm text-center">
-                        Personalización de tarjetas próximamente...
+                        {t('settings.dashboard_cards_soon')}
                     </p>
                     <p className="text-zinc-500 text-xs text-center mt-2">
-                        Podrás elegir qué 4-8 tarjetas mostrar en tu dashboard
+                        {t('settings.dashboard_cards_desc')}
                     </p>
                 </div>
             </div>
@@ -132,9 +149,10 @@ export function PreferencesSection() {
                     className="px-6 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-500/50 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
                 >
                     <Save className="w-4 h-4" />
-                    {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                    {isSaving ? t('common.saving') : t('common.save')}
                 </button>
             </div>
         </div>
     )
 }
+

@@ -6,26 +6,31 @@ import { ProfileSection } from '@/components/settings/ProfileSection'
 import { WorkspaceSection } from '@/components/settings/WorkspaceSection'
 import { PreferencesSection } from '@/components/settings/PreferencesSection'
 import { AccountSection } from '@/components/settings/AccountSection'
+import { useTranslation } from '@/stores/useLocaleStore'
 
 type SettingsTab = 'profile' | 'workspace' | 'preferences' | 'account'
 
 export default function SettingsPage() {
+    const { t, locale } = useTranslation()
     const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
 
     const tabs = [
-        { id: 'profile' as const, label: 'Perfil', icon: User },
+        { id: 'profile' as const, label: locale === 'es' ? 'Perfil' : 'Profile', icon: User },
         { id: 'workspace' as const, label: 'Workspace', icon: Settings },
-        { id: 'preferences' as const, label: 'Preferencias', icon: Bell },
-        { id: 'account' as const, label: 'Cuenta', icon: Lock }
+        { id: 'preferences' as const, label: t('settings.preferences'), icon: Bell },
+        { id: 'account' as const, label: locale === 'es' ? 'Cuenta' : 'Account', icon: Lock }
     ]
 
     return (
         <div className="p-8 space-y-8">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-white mb-2">Configuración</h1>
-                <p className="text-zinc-400">Gestiona tu perfil, workspace y preferencias</p>
+                <h1 className="text-2xl font-bold text-white mb-2">{t('settings.title')}</h1>
+                <p className="text-zinc-400">
+                    {locale === 'es' ? 'Gestiona tu perfil, workspace y preferencias' : 'Manage your profile, workspace, and preferences'}
+                </p>
             </div>
+
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* Sidebar Tabs */}

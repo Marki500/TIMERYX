@@ -20,14 +20,17 @@ import { ActivityChartSkeleton, RecentActivitySkeleton, DashboardStatsSkeleton }
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { Suspense } from 'react'
 
+import { useTranslation } from '@/stores/useLocaleStore'
+
 export default function DashboardPage() {
+    const { t, locale } = useTranslation()
     const { tasks, fetchTasks, createTask, viewMode, openCreateModal } = useTaskStore()
     const { currentWorkspace, profile } = useUserStore()
     const { projects, fetchProjects } = useProjectStore()
     const { productivityStats, refresh } = useDashboardData()
     const supabase = createClient()
 
-    const [greeting, setGreeting] = useState('Buenos días')
+    const [greetingKey, setGreetingKey] = useState('dashboard.greeting_morning')
 
     useEffect(() => {
         if (currentWorkspace) {
@@ -39,9 +42,9 @@ export default function DashboardPage() {
 
     useEffect(() => {
         const hour = new Date().getHours()
-        if (hour < 12) setGreeting('Buenos días')
-        else if (hour < 20) setGreeting('Buenas tardes')
-        else setGreeting('Buenas noches')
+        if (hour < 12) setGreetingKey('dashboard.greeting_morning')
+        else if (hour < 20) setGreetingKey('dashboard.greeting_afternoon')
+        else setGreetingKey('dashboard.greeting_evening')
     }, [])
 
     // Ensure we don't get stuck in Kanban view since it's disabled here
@@ -67,10 +70,10 @@ export default function DashboardPage() {
             <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
                 <div>
                     <p className="text-zinc-500 font-medium mb-1">
-                        {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        {new Date().toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </p>
                     <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
-                        {greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-indigo-400">
+                        {t(greetingKey)}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-indigo-400">
                             {(profile as any)?.display_name || profile?.email?.split('@')[0] || 'User'}
                         </span>
                     </h1>
@@ -80,7 +83,7 @@ export default function DashboardPage() {
                         onClick={() => openCreateModal()}
                         className="px-6 py-3 bg-white text-black font-bold rounded-full hover:bg-zinc-200 transition-all hover:scale-105 shadow-xl shadow-white/5 active:scale-95"
                     >
-                        + Nueva Tarea
+                        + {t('common.new_task')}
                     </button>
                 </div>
             </div>
@@ -92,12 +95,12 @@ export default function DashboardPage() {
                     {/* Glow effect */}
                     <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/20 rounded-full blur-3xl -mr-16 -mt-16 transition-opacity group-hover:opacity-75" />
 
-                    <h3 className="text-zinc-400 font-medium mb-1 relative z-10">Racha Actual</h3>
+                    <h3 className="text-zinc-400 font-medium mb-1 relative z-10">{t('dashboard.current_streak')}</h3>
                     <div className="text-4xl font-bold text-white mb-2 font-mono tracking-tight relative z-10">
                         {productivityStats.currentStreak} 🔥
                     </div>
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-xs font-bold text-amber-300 border border-amber-500/20 relative z-10">
-                        <span>{productivityStats.currentStreak === 1 ? 'día' : 'días'} consecutivos</span>
+                        <span>{productivityStats.currentStreak === 1 ? t('dashboard.consecutive_days_one') : t('dashboard.consecutive_days_other')}</span>
                     </div>
                 </div>
 
@@ -105,12 +108,12 @@ export default function DashboardPage() {
                 <div className="p-6 rounded-3xl bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border border-indigo-500/20 backdrop-blur-sm relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl -mr-16 -mt-16 transition-opacity group-hover:opacity-75" />
 
-                    <h3 className="text-zinc-400 font-medium mb-1 relative z-10">Promedio Diario</h3>
+                    <h3 className="text-zinc-400 font-medium mb-1 relative z-10">{t('dashboard.daily_average')}</h3>
                     <div className="text-4xl font-bold text-white mb-2 font-mono tracking-tight relative z-10">
                         {productivityStats.averageDailyHours.toFixed(1)}h
                     </div>
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/10 text-xs font-bold text-indigo-300 border border-indigo-500/20 relative z-10">
-                        <span>últimos 7 días</span>
+                        <span>{t('dashboard.last_7_days')}</span>
                     </div>
                 </div>
 
@@ -118,10 +121,10 @@ export default function DashboardPage() {
                 <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 backdrop-blur-sm relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl -mr-16 -mt-16 transition-opacity group-hover:opacity-75" />
 
-                    <h3 className="text-zinc-400 font-medium mb-1 relative z-10">Día Más Productivo</h3>
+                    <h3 className="text-zinc-400 font-medium mb-1 relative z-10">{t('dashboard.most_productive_day')}</h3>
                     <div className="text-2xl font-bold text-white mb-2 relative z-10">{productivityStats.mostProductiveDay}</div>
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-xs font-bold text-emerald-300 border border-emerald-500/20 relative z-10">
-                        <span>esta semana</span>
+                        <span>{t('dashboard.this_week')}</span>
                     </div>
                 </div>
 
@@ -129,10 +132,10 @@ export default function DashboardPage() {
                 <div className="p-6 rounded-3xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 backdrop-blur-sm relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl -mr-16 -mt-16 transition-opacity group-hover:opacity-75" />
 
-                    <h3 className="text-zinc-400 font-medium mb-1 relative z-10">Tareas Completadas</h3>
+                    <h3 className="text-zinc-400 font-medium mb-1 relative z-10">{t('dashboard.completed_tasks')}</h3>
                     <div className="text-4xl font-bold text-white mb-2 relative z-10">{productivityStats.tasksCompletedThisWeek}</div>
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 text-xs font-bold text-purple-300 border border-purple-500/20 relative z-10">
-                        <span>esta semana</span>
+                        <span>{t('dashboard.this_week')}</span>
                     </div>
                 </div>
             </div>
@@ -154,9 +157,10 @@ export default function DashboardPage() {
             {/* Task Management Section - Full Width */}
             <div className="space-y-6 pt-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-white">Project Tasks</h2>
+                    <h2 className="text-2xl font-bold text-white">{t('dashboard.project_tasks')}</h2>
                     <ViewSwitcher excludedViews={['kanban']} />
                 </div>
+
 
                 <div className="min-h-[400px]">
                     {viewMode === 'table' && <TaskTable />}

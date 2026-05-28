@@ -14,19 +14,23 @@ import {
 import { cn } from '@/lib/utils'
 import { useTaskStore } from '@/stores/useTaskStore'
 
+import { useTranslation } from '@/stores/useLocaleStore'
+
 export function MobileNav() {
+    const { t } = useTranslation()
     const pathname = usePathname()
     const { openCreateModal } = useTaskStore()
     // We can trigger "New Task" directly from here too if we want
     // But for now let's keep it simple navigation
 
     const links = [
-        { href: '/dashboard', icon: LayoutGrid, label: 'Home' },
-        { href: '/tasks', icon: CheckSquare, label: 'Tasks' },
-        { href: '/timesheet', icon: Clock, label: 'Timesheet' },
-        { href: '/projects', icon: Folder, label: 'Projects' },
-        { href: '/reports', icon: PieChart, label: 'Stats' },
+        { href: '/dashboard', icon: LayoutGrid, label: t('nav.home') },
+        { href: '/tasks', icon: CheckSquare, label: t('nav.tasks') },
+        { href: '/timesheet', icon: Clock, label: t('nav.timesheet') },
+        { href: '/projects', icon: Folder, label: t('nav.projects') },
+        { href: '/reports', icon: PieChart, label: t('nav.reports') },
     ]
+
 
     return (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 lg:hidden w-auto">

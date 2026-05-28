@@ -18,7 +18,10 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTaskStore } from '@/stores/useTaskStore'
 
+import { useTranslation } from '@/stores/useLocaleStore'
+
 export function FloatingDock() {
+    const { t } = useTranslation()
     const pathname = usePathname()
     const router = useRouter()
     const supabase = createClient()
@@ -32,13 +35,14 @@ export function FloatingDock() {
     }
 
     const links = [
-        { href: '/dashboard', icon: LayoutGrid, label: 'Home' },
-        { href: '/tasks', icon: CheckSquare, label: 'Tasks' },
-        { href: '/projects', icon: Folder, label: 'Projects' },
-        { href: '/timesheet', icon: Clock, label: 'Timesheet' },
-        { href: '/reports', icon: PieChart, label: 'Reports' },
-        { href: '/settings', icon: Settings, label: 'Settings' },
+        { href: '/dashboard', icon: LayoutGrid, label: t('nav.home') },
+        { href: '/tasks', icon: CheckSquare, label: t('nav.tasks') },
+        { href: '/projects', icon: Folder, label: t('nav.projects') },
+        { href: '/timesheet', icon: Clock, label: t('nav.timesheet') },
+        { href: '/reports', icon: PieChart, label: t('nav.reports') },
+        { href: '/settings', icon: Settings, label: t('nav.settings') },
     ]
+
 
     return (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-auto max-w-[95vw]">
