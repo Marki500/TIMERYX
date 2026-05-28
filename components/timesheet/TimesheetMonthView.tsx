@@ -28,18 +28,22 @@ interface TimeEntry {
     end_time: string | null
     description: string | null
     tasks: {
+        id: string
+        project_id: string | null
         title: string
         projects: {
+            id: string
             name: string
             color: string
-        }
-    }
+        } | null
+    } | null
 }
 
 export function TimesheetMonthView() {
     const { t, locale } = useTranslation()
     const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()))
     const [entries, setEntries] = useState<TimeEntry[]>([])
+    const [allTimeHours, setAllTimeHours] = useState<Record<string, number>>({})
     const [isLoading, setIsLoading] = useState(true)
     const { profile } = useUserStore()
     const supabaseRef = useRef(createClient())
@@ -60,8 +64,11 @@ export function TimesheetMonthView() {
             .select(`
                 id, start_time, end_time, description,
                 tasks (
+                    id,
+                    project_id,
                     title,
                     projects (
+                        id,
                         name,
                         color
                     )
@@ -75,6 +82,23 @@ export function TimesheetMonthView() {
         if (!error && data) {
             setEntries(data as unknown as TimeEntry[])
         }
+
+        // Fetch all-time task durations to calculate all-time project hours
+        const { data: taskDurations } = await supabaseRef.current
+            .from('tasks')
+            .select('project_id, total_duration')
+            .not('project_id', 'is', null)
+
+        if (taskDurations) {
+            const hoursMap: Record<string, number> = {}
+            taskDurations.forEach((task: any) => {
+                const projId = task.project_id
+                if (!hoursMap[projId]) hoursMap[projId] = 0
+                hoursMap[projId] += (task.total_duration || 0) / 3600 // convert seconds to hours
+            })
+            setAllTimeHours(hoursMap)
+        }
+
         setIsLoading(false)
     }, [currentMonth, profile])
 
@@ -121,12 +145,13 @@ export function TimesheetMonthView() {
 
     // Calculate aggregated project statistics for visual representation
     const getProjectSummaries = () => {
-        const summaries: Record<string, { name: string; color: string; minutes: number }> = {}
+        const summaries: Record<string, { id: string; name: string; color: string; minutes: number }> = {}
         let grandTotalMinutes = 0
 
         entries.forEach(entry => {
             if (!entry.end_time) return
             const project = entry.tasks?.projects
+            const projectId = project?.id || 'no-project'
             const projectName = project?.name || (locale === 'es' ? 'Sin proyecto' : 'No Project')
             const projectColor = project?.color || '#a1a1aa'
             
@@ -136,16 +161,21 @@ export function TimesheetMonthView() {
             
             grandTotalMinutes += durationMinutes
             
-            if (!summaries[projectName]) {
-                summaries[projectName] = { name: projectName, color: projectColor, minutes: 0 }
+            if (!summaries[projectId]) {
+                summaries[projectId] = { id: projectId, name: projectName, color: projectColor, minutes: 0 }
             }
-            summaries[projectName].minutes += durationMinutes
+            summaries[projectId].minutes += durationMinutes
         })
 
         return {
             items: Object.values(summaries).sort((a, b) => b.minutes - a.minutes),
             grandTotalMinutes
         }
+    }
+
+    const formatAllTimeDuration = (hoursDecimal: number) => {
+        const totalMinutes = Math.round(hoursDecimal * 60)
+        return formatDuration(totalMinutes)
     }
 
     const dateFnsLocale = locale === 'es' ? es : enUS
@@ -221,6 +251,12 @@ export function TimesheetMonthView() {
                                                 width: `${(item.minutes / grandTotalMinutes) * 100}%` 
                                             }} 
                                         />
+                                    </div>
+                                    <div className="flex items-center justify-between text-[10px] text-zinc-500 mt-1 font-medium pt-1 border-t border-white/5">
+                                        <span>{locale === 'es' ? 'Total histórico' : 'All-time total'}</span>
+                                        <span className="font-mono text-zinc-400">
+                                            {formatAllTimeDuration(allTimeHours[item.id] || 0)}
+                                        </span>
                                     </div>
                                 </div>
                             ))}
