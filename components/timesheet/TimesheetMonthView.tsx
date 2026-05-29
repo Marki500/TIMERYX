@@ -18,8 +18,10 @@ import { ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BulkTimeEntryModal } from './BulkTimeEntryModal'
 import { useUserStore } from '@/stores/useUserStore'
+import { useTaskStore } from '@/stores/useTaskStore'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/stores/useLocaleStore'
+import { useDrag, useDrop } from 'react-dnd'
 
 interface TimeEntry {
     id: string
@@ -37,6 +39,157 @@ interface TimeEntry {
             color: string
         } | null
     } | null
+}
+
+interface DraggableTimeEntryProps {
+    entry: TimeEntry
+    formatDuration: (minutes: number) => string
+    getDayTotalDuration: (dayEntries: TimeEntry[]) => number
+}
+
+function DraggableTimeEntry({ entry, formatDuration, getDayTotalDuration }: DraggableTimeEntryProps) {
+    const [{ isDragging }, dragRef] = useDrag(() => ({
+        type: 'TIME_ENTRY',
+        item: { id: entry.id },
+        collect: (monitor) => ({
+            isDragging: !!monitor.isDragging()
+        })
+    }), [entry])
+
+    return (
+        <div 
+            ref={dragRef as any}
+            className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-xs text-zinc-300 hover:bg-white/10 hover:border-white/20 transition-all cursor-grab active:cursor-grabbing",
+                isDragging ? "opacity-30 scale-95 border-primary-500/30 bg-primary-500/5" : ""
+            )}
+        >
+            <div 
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: entry.tasks?.projects?.color || '#3b82f6' }}
+            />
+            <span className="font-medium max-w-[120px] truncate" title={entry.tasks?.title}>
+                {entry.tasks?.projects?.name}: {entry.tasks?.title}
+            </span>
+            <span className="text-zinc-500 flex items-center gap-1 ml-2 shrink-0">
+                <Clock size={10} />
+                {formatDuration(getDayTotalDuration([entry]))}
+            </span>
+        </div>
+    )
+}
+
+interface DroppableDayRowProps {
+    day: Date
+    dayEntries: TimeEntry[]
+    totalMinutes: number
+    isCurrentDay: boolean
+    dateFnsLocale: any
+    locale: string
+    t: (key: string) => string
+    handleAddEntryClick: (date: Date) => void
+    formatDuration: (minutes: number) => string
+    getDayTotalDuration: (dayEntries: TimeEntry[]) => number
+    moveEntryDate: (entryId: string, targetDate: Date) => Promise<void>
+}
+
+function DroppableDayRow({
+    day,
+    dayEntries,
+    totalMinutes,
+    isCurrentDay,
+    dateFnsLocale,
+    locale,
+    t,
+    handleAddEntryClick,
+    formatDuration,
+    getDayTotalDuration,
+    moveEntryDate
+}: DroppableDayRowProps) {
+    const [{ isOver, canDrop }, dropRef] = useDrop(() => ({
+        accept: 'TIME_ENTRY',
+        drop: (item: { id: string }) => {
+            moveEntryDate(item.id, day)
+        },
+        collect: (monitor) => ({
+            isOver: !!monitor.isOver(),
+            canDrop: !!monitor.canDrop()
+        })
+    }), [day, moveEntryDate])
+
+    return (
+        <div 
+            ref={dropRef as any}
+            className={cn(
+                "grid grid-cols-[120px_1fr_120px] gap-4 p-4 items-center group transition-all duration-200 border-2",
+                isCurrentDay 
+                    ? "bg-primary-500/5 border-transparent" 
+                    : "hover:bg-white/[0.02] border-transparent",
+                isOver && canDrop
+                    ? "bg-primary-500/10 border-dashed border-primary-500/40 scale-[0.99] shadow-lg shadow-primary-500/5"
+                    : "border-transparent"
+            )}
+        >
+            {/* Date Column */}
+            <div>
+                <div className={cn(
+                    "font-medium transition-colors",
+                    isCurrentDay ? "text-primary-400" : "text-zinc-300",
+                    isOver && "text-primary-400"
+                )}>
+                    {format(day, 'MMM d', { locale: dateFnsLocale })}
+                </div>
+                <div className="text-xs text-zinc-500 capitalize">
+                    {format(day, 'EEEE', { locale: dateFnsLocale })}
+                </div>
+            </div>
+
+            {/* Entries Column */}
+            <div className="flex flex-wrap items-center gap-2">
+                {dayEntries.length === 0 ? (
+                    <span className="text-sm text-zinc-600 italic">
+                        {isOver && canDrop 
+                            ? (locale === 'es' ? 'Soltar aquí...' : 'Drop here...') 
+                            : t('timesheet.no_entries')}
+                    </span>
+                ) : (
+                    <div className="flex flex-wrap gap-2">
+                        {dayEntries.map((entry) => (
+                            <DraggableTimeEntry 
+                                key={entry.id} 
+                                entry={entry}
+                                formatDuration={formatDuration}
+                                getDayTotalDuration={getDayTotalDuration}
+                            />
+                        ))}
+                    </div>
+                )}
+                <button
+                    onClick={() => handleAddEntryClick(day)}
+                    className={cn(
+                        "p-1.5 rounded-lg border border-dashed transition-all",
+                        dayEntries.length === 0 
+                            ? "opacity-100 border-white/20 text-zinc-400 hover:border-primary-500/50 hover:text-primary-400 hover:bg-primary-500/10" 
+                            : "opacity-0 group-hover:opacity-100 border-white/20 text-zinc-400 hover:border-primary-500/50 hover:text-primary-400 hover:bg-primary-500/10"
+                    )}
+                    title={locale === 'es' ? 'Añadir registro' : 'Add Time Entry'}
+                >
+                    <Plus size={16} />
+                </button>
+            </div>
+
+            {/* Total Column */}
+            <div className="text-right">
+                <span className={cn(
+                    "font-bold text-sm transition-colors",
+                    totalMinutes > 0 ? "text-white" : "text-zinc-600",
+                    isOver && "text-primary-400"
+                )}>
+                    {formatDuration(totalMinutes)}
+                </span>
+            </div>
+        </div>
+    )
 }
 
 export function TimesheetMonthView() {
@@ -145,6 +298,61 @@ export function TimesheetMonthView() {
     const handleAddEntryClick = (date: Date) => {
         setSelectedDate(date)
         setIsModalOpen(true)
+    }
+
+    const moveEntryDate = async (entryId: string, targetDate: Date) => {
+        const entry = entries.find(e => e.id === entryId)
+        if (!entry) return
+
+        const currentStart = new Date(entry.start_time)
+        const currentEnd = entry.end_time ? new Date(entry.end_time) : null
+
+        // Calculate new start time keeping the hours/minutes/seconds
+        const newStart = new Date(targetDate)
+        newStart.setHours(currentStart.getHours(), currentStart.getMinutes(), currentStart.getSeconds(), currentStart.getMilliseconds())
+
+        let newEnd = null
+        if (currentEnd) {
+            newEnd = new Date(targetDate)
+            newEnd.setHours(currentEnd.getHours(), currentEnd.getMinutes(), currentEnd.getSeconds(), currentEnd.getMilliseconds())
+        }
+
+        // Optimistic UI update
+        const updatedEntries = entries.map(e => {
+            if (e.id === entryId) {
+                return {
+                    ...e,
+                    start_time: newStart.toISOString(),
+                    end_time: newEnd ? newEnd.toISOString() : null
+                }
+            }
+            return e
+        })
+        setEntries(updatedEntries)
+
+        try {
+            const supabase = supabaseRef.current
+            const { error } = await supabase
+                .from('time_entries')
+                .update({
+                    start_time: newStart.toISOString(),
+                    end_time: newEnd ? newEnd.toISOString() : null
+                })
+                .eq('id', entryId)
+
+            if (error) {
+                throw error
+            }
+            
+            // Trigger store updates to sync duration
+            const { fetchTasks } = useTaskStore.getState()
+            fetchTasks()
+            
+            fetchEntries() // refetch from DB
+        } catch (error) {
+            console.error('Failed to move time entry:', error)
+            fetchEntries() // rollback
+        }
     }
 
     // Helper to calculate total duration in minutes for a day
@@ -341,76 +549,20 @@ export function TimesheetMonthView() {
                             const isCurrentDay = isToday(day)
 
                             return (
-                                <div 
-                                    key={day.toISOString()} 
-                                    className={cn(
-                                        "grid grid-cols-[120px_1fr_120px] gap-4 p-4 items-center group transition-colors",
-                                        isCurrentDay ? "bg-primary-500/5" : "hover:bg-white/[0.02]"
-                                    )}
-                                >
-                                    {/* Date Column */}
-                                    <div>
-                                        <div className={cn(
-                                            "font-medium",
-                                            isCurrentDay ? "text-primary-400" : "text-zinc-300"
-                                        )}>
-                                            {format(day, 'MMM d', { locale: dateFnsLocale })}
-                                        </div>
-                                        <div className="text-xs text-zinc-500 capitalize">
-                                            {format(day, 'EEEE', { locale: dateFnsLocale })}
-                                        </div>
-                                    </div>
-
-                                    {/* Entries Column */}
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {dayEntries.length === 0 ? (
-                                            <span className="text-sm text-zinc-600">{t('timesheet.no_entries')}</span>
-                                        ) : (
-                                            <div className="flex flex-wrap gap-2">
-                                                {dayEntries.map((entry) => (
-                                                    <div 
-                                                        key={entry.id} 
-                                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-xs text-zinc-300 hover:bg-white/10 transition-colors"
-                                                    >
-                                                        <div 
-                                                            className="w-2 h-2 rounded-full"
-                                                            style={{ backgroundColor: entry.tasks?.projects?.color || '#3b82f6' }}
-                                                        />
-                                                        <span className="font-medium max-w-[120px] truncate" title={entry.tasks?.title}>
-                                                            {entry.tasks?.projects?.name}: {entry.tasks?.title}
-                                                        </span>
-                                                        <span className="text-zinc-500 flex items-center gap-1 ml-2">
-                                                            <Clock size={10} />
-                                                            {formatDuration(getDayTotalDuration([entry]))}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                        <button
-                                            onClick={() => handleAddEntryClick(day)}
-                                            className={cn(
-                                                "p-1.5 rounded-lg border border-dashed transition-all",
-                                                dayEntries.length === 0 
-                                                    ? "opacity-100 border-white/20 text-zinc-400 hover:border-primary-500/50 hover:text-primary-400 hover:bg-primary-500/10" 
-                                                    : "opacity-0 group-hover:opacity-100 border-white/20 text-zinc-400 hover:border-primary-500/50 hover:text-primary-400 hover:bg-primary-500/10"
-                                            )}
-                                            title={locale === 'es' ? 'Añadir registro' : 'Add Time Entry'}
-                                        >
-                                            <Plus size={16} />
-                                        </button>
-                                    </div>
-
-                                    {/* Total Column */}
-                                    <div className="text-right">
-                                        <span className={cn(
-                                            "font-bold text-sm",
-                                            totalMinutes > 0 ? "text-white" : "text-zinc-600"
-                                        )}>
-                                            {formatDuration(totalMinutes)}
-                                        </span>
-                                    </div>
-                                </div>
+                                <DroppableDayRow
+                                    key={day.toISOString()}
+                                    day={day}
+                                    dayEntries={dayEntries}
+                                    totalMinutes={totalMinutes}
+                                    isCurrentDay={isCurrentDay}
+                                    dateFnsLocale={dateFnsLocale}
+                                    locale={locale}
+                                    t={t}
+                                    handleAddEntryClick={handleAddEntryClick}
+                                    formatDuration={formatDuration}
+                                    getDayTotalDuration={getDayTotalDuration}
+                                    moveEntryDate={moveEntryDate}
+                                />
                             )
                         })}
                     </div>
