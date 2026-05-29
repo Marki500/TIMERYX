@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDuration } from '@/lib/utils'
 import { format } from 'date-fns'
 import { Download, FileText, Plus, Edit2, Clock, CheckSquare, Trash2 } from 'lucide-react'
-import { exportToCSV, exportToPDF, exportMonthlyProjectPDF } from '@/lib/export'
+import { exportToCSV, exportToPDF, exportMonthlyProjectPDF, exportMonthlyProjectNoTotalPDF } from '@/lib/export'
 import { ManualTimeDialog } from '@/components/timer/ManualTimeDialog'
 import { EditTimeEntryDialog, EntryToEdit } from '@/components/reports/EditTimeEntryDialog'
 import { useTaskStore } from '@/stores/useTaskStore'
@@ -189,6 +189,13 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
                         >
                             <FileText className="w-4 h-4" />
                             <span className="font-medium">Resumen Proyectos (PDF)</span>
+                        </button>
+                        <button
+                            onClick={() => exportMonthlyProjectNoTotalPDF(entries, `timeryx_resumen_proyectos_sin_total_${format(new Date(), 'yyyy-MM-dd')}.pdf`)}
+                            className="px-4 py-2 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl text-cyan-400 hover:from-cyan-500/20 hover:to-blue-500/20 transition-all flex items-center gap-2"
+                        >
+                            <FileText className="w-4 h-4" />
+                            <span className="font-medium">Resumen Proyectos Sin Total (PDF)</span>
                         </button>
                     </div>
                 </div>
