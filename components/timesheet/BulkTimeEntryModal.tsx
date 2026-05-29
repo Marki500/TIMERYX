@@ -10,7 +10,7 @@ import { useUserStore } from '@/stores/useUserStore'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useTranslation } from '@/stores/useLocaleStore'
 import { cn } from '@/lib/utils'
-import { format, set, addMinutes } from 'date-fns'
+import { format, set, addMinutes, eachDayOfInterval, getDay, startOfMonth, endOfMonth } from 'date-fns'
 
 interface Task {
     id: string
@@ -50,6 +50,20 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
     const [newTaskTitle, setNewTaskTitle] = useState('')
     const [isCreatingTaskLoading, setIsCreatingTaskLoading] = useState(false)
 
+    // Multi-day bulk logging state
+    const [isMultiDay, setIsMultiDay] = useState(false)
+    const [startDate, setStartDate] = useState('')
+    const [endDate, setEndDate] = useState('')
+    const [weekdays, setWeekdays] = useState<Record<number, boolean>>({
+        1: true, // Monday
+        2: true, // Tuesday
+        3: true, // Wednesday
+        4: true, // Thursday
+        5: true, // Friday
+        6: false, // Saturday
+        0: false  // Sunday
+    })
+
     useEffect(() => {
         setMounted(true)
         return () => setMounted(false)
@@ -65,8 +79,23 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
             setDescription('')
             setIsCreatingTask(false)
             setNewTaskTitle('')
+            
+            // Reset multi-day state
+            setIsMultiDay(false)
+            const initialDate = selectedDate || new Date()
+            setStartDate(format(initialDate, 'yyyy-MM-dd'))
+            setEndDate(format(endOfMonth(initialDate), 'yyyy-MM-dd'))
+            setWeekdays({
+                1: true,
+                2: true,
+                3: true,
+                4: true,
+                5: true,
+                6: false,
+                0: false
+            })
         }
-    }, [isOpen, currentWorkspace, fetchProjects])
+    }, [isOpen, currentWorkspace, fetchProjects, selectedDate])
 
     // Fetch tasks when project changes
     useEffect(() => {
@@ -118,7 +147,7 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!selectedTaskId || !selectedDate) return
+        if (!selectedTaskId) return
         
         const h = parseInt(hours) || 0
         const m = parseInt(minutes) || 0
@@ -126,19 +155,60 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
 
         setIsSubmitting(true)
         try {
-            // Set arbitrary start time at 09:00:00 for the selected date
-            const startTime = set(selectedDate, { hours: 9, minutes: 0, seconds: 0, milliseconds: 0 })
-            const totalMinutes = (h * 60) + m
-            const endTime = addMinutes(startTime, totalMinutes)
+            if (isMultiDay) {
+                // Bulk multi-day creation
+                const start = new Date(startDate + 'T00:00:00')
+                const end = new Date(endDate + 'T23:59:59')
+                if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+                    setIsSubmitting(false)
+                    return
+                }
 
-            const { error } = await (supabaseRef.current.rpc as any)('add_manual_time_entry', {
-                p_task_id: selectedTaskId,
-                p_start_time: startTime.toISOString(),
-                p_end_time: endTime.toISOString(),
-                p_description: description || null
-            })
+                const intervalDays = eachDayOfInterval({ start, end })
+                const targetDays = intervalDays.filter(day => {
+                    const dow = getDay(day) // 0 = Sun, 1 = Mon, ..., 6 = Sat
+                    return weekdays[dow]
+                })
 
-            if (error) throw error
+                if (targetDays.length === 0) {
+                    setIsSubmitting(false)
+                    return
+                }
+
+                const totalMinutes = (h * 60) + m
+
+                // Submit in parallel
+                const promises = targetDays.map(day => {
+                    const startTime = set(day, { hours: 9, minutes: 0, seconds: 0, milliseconds: 0 })
+                    const endTime = addMinutes(startTime, totalMinutes)
+
+                    return (supabaseRef.current.rpc as any)('add_manual_time_entry', {
+                        p_task_id: selectedTaskId,
+                        p_start_time: startTime.toISOString(),
+                        p_end_time: endTime.toISOString(),
+                        p_description: description || null
+                    })
+                })
+
+                const results = await Promise.all(promises)
+                const errorResult = results.find(res => res.error)
+                if (errorResult && errorResult.error) throw errorResult.error
+            } else {
+                if (!selectedDate) return
+                // Set arbitrary start time at 09:00:00 for the selected date
+                const startTime = set(selectedDate, { hours: 9, minutes: 0, seconds: 0, milliseconds: 0 })
+                const totalMinutes = (h * 60) + m
+                const endTime = addMinutes(startTime, totalMinutes)
+
+                const { error } = await (supabaseRef.current.rpc as any)('add_manual_time_entry', {
+                    p_task_id: selectedTaskId,
+                    p_start_time: startTime.toISOString(),
+                    p_end_time: endTime.toISOString(),
+                    p_description: description || null
+                })
+
+                if (error) throw error
+            }
 
             onEntryAdded()
             onClose()
@@ -181,6 +251,106 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
                         </div>
 
                         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                            {/* Toggle Multi-Day */}
+                            <div className="flex items-center justify-between p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl">
+                                <div className="space-y-0.5">
+                                    <span className="text-sm font-semibold text-white">
+                                        {locale === 'es' ? 'Registrar en múltiples días' : 'Log on multiple days'}
+                                    </span>
+                                    <p className="text-xs text-zinc-500">
+                                        {locale === 'es' 
+                                            ? 'Registra esta actividad en varios días a la vez (ej. de lunes a viernes)' 
+                                            : 'Log this activity across several days at once (e.g. Mon-Fri)'}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsMultiDay(!isMultiDay)}
+                                    className={cn(
+                                        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                                        isMultiDay ? "bg-primary-500" : "bg-zinc-850"
+                                    )}
+                                >
+                                    <span
+                                        className={cn(
+                                            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                                            isMultiDay ? "translate-x-5" : "translate-x-0"
+                                        )}
+                                    />
+                                </button>
+                            </div>
+
+                            {isMultiDay && (
+                                <div className="space-y-4 p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-medium text-zinc-400">
+                                                {locale === 'es' ? 'Fecha Inicio' : 'Start Date'}
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={startDate}
+                                                onChange={(e) => setStartDate(e.target.value)}
+                                                required
+                                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary-500/50"
+                                                style={{ colorScheme: 'dark' }}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-medium text-zinc-400">
+                                                {locale === 'es' ? 'Fecha Fin' : 'End Date'}
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={endDate}
+                                                onChange={(e) => setEndDate(e.target.value)}
+                                                required
+                                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary-500/50"
+                                                style={{ colorScheme: 'dark' }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Weekdays selector */}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-medium text-zinc-400">
+                                            {locale === 'es' ? 'Días de la semana' : 'Days of the week'}
+                                        </label>
+                                        <div className="flex justify-between gap-1">
+                                            {[
+                                                { value: 1, label: locale === 'es' ? 'L' : 'M' },
+                                                { value: 2, label: locale === 'es' ? 'M' : 'T' },
+                                                { value: 3, label: locale === 'es' ? 'X' : 'W' },
+                                                { value: 4, label: locale === 'es' ? 'J' : 'T' },
+                                                { value: 5, label: locale === 'es' ? 'V' : 'F' },
+                                                { value: 6, label: locale === 'es' ? 'S' : 'S' },
+                                                { value: 0, label: locale === 'es' ? 'D' : 'S' }
+                                            ].map((day) => {
+                                                const isActive = weekdays[day.value]
+                                                return (
+                                                    <button
+                                                        key={day.value}
+                                                        type="button"
+                                                        onClick={() => setWeekdays(prev => ({
+                                                            ...prev,
+                                                            [day.value]: !prev[day.value]
+                                                        }))}
+                                                        className={cn(
+                                                            "w-8 h-8 rounded-full text-xs font-bold transition-all flex items-center justify-center border",
+                                                            isActive
+                                                                ? "bg-primary-500/20 border-primary-500 text-primary-400 shadow-[0_0_8px_rgba(56,189,248,0.2)]"
+                                                                : "bg-white/5 border-white/10 text-zinc-400 hover:bg-white/10 hover:text-white"
+                                                        )}
+                                                    >
+                                                        {day.label}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Project Selection */}
                             <div className="space-y-2 relative">
                                 <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
