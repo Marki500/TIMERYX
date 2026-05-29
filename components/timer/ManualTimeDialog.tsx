@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, Calendar as CalendarIcon } from 'lucide-react'
+import { X, Clock, Calendar as CalendarIcon, Plus } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useTimerStore } from '@/stores/useTimerStore'
 import { useProjectStore } from '@/stores/useProjectStore'
+import { useTranslation } from '@/stores/useLocaleStore'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import { useToast } from '@/stores/useToast'
 
@@ -22,6 +23,7 @@ export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId, preSelect
     const { projects } = useProjectStore()
     const { addManualEntry } = useTimerStore()
     const { addToast } = useToast()
+    const { t, locale } = useTranslation()
 
     const [selectedTaskId, setSelectedTaskId] = useState(preSelectedTaskId || '')
     const [date, setDate] = useState(preSelectedDate || new Date().toISOString().split('T')[0])
@@ -29,10 +31,21 @@ export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId, preSelect
     const [minutes, setMinutes] = useState('30')
     const [isSubmitting, setIsSubmitting] = useState(false)
 
+    // Inline task creation state
+    const [isCreatingTask, setIsCreatingTask] = useState(false)
+    const [selectedProjectForNewTask, setSelectedProjectForNewTask] = useState('')
+    const [newTaskTitle, setNewTaskTitle] = useState('')
+    const [isCreatingTaskLoading, setIsCreatingTaskLoading] = useState(false)
+
     // Load tasks if store is empty (e.g. opening from reports page without visiting a project first)
     useEffect(() => {
-        if (isOpen && tasks.length === 0) {
-            fetchTasks()
+        if (isOpen) {
+            if (tasks.length === 0) {
+                fetchTasks()
+            }
+            setIsCreatingTask(false)
+            setSelectedProjectForNewTask('')
+            setNewTaskTitle('')
         }
     }, [isOpen])
 
@@ -43,6 +56,33 @@ export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId, preSelect
     useEffect(() => {
         if (preSelectedDate) setDate(preSelectedDate)
     }, [preSelectedDate])
+
+    const handleCreateTask = async () => {
+        if (!newTaskTitle.trim() || !selectedProjectForNewTask) return
+        setIsCreatingTaskLoading(true)
+        try {
+            const { createTask } = useTaskStore.getState()
+            const newTask = await createTask({
+                title: newTaskTitle.trim(),
+                project_id: selectedProjectForNewTask,
+                status: 'todo'
+            })
+            if (newTask) {
+                setSelectedTaskId(newTask.id)
+                setIsCreatingTask(false)
+                setNewTaskTitle('')
+                setSelectedProjectForNewTask('')
+                addToast(locale === 'es' ? 'Tarea creada correctamente.' : 'Task created successfully.', 'success')
+            } else {
+                addToast(locale === 'es' ? 'Error al crear la tarea.' : 'Failed to create task.', 'error')
+            }
+        } catch (error) {
+            console.error('Failed to quick-create task:', error)
+            addToast(locale === 'es' ? 'Error al crear la tarea.' : 'Failed to create task.', 'error')
+        } finally {
+            setIsCreatingTaskLoading(false)
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -126,7 +166,7 @@ export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId, preSelect
                             {/* Form */}
                             <form onSubmit={handleSubmit} className="relative p-6 space-y-5">
                                 {/* Task Display/Selector */}
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                     {preSelectedTaskId && selectedTask ? (
                                         <>
                                             <label className="text-sm font-medium text-zinc-400">Task</label>
@@ -138,22 +178,91 @@ export function ManualTimeDialog({ isOpen, onClose, preSelectedTaskId, preSelect
                                             </div>
                                         </>
                                     ) : (
-                                        <CustomSelect
-                                            label="Task"
-                                            value={selectedTaskId}
-                                            onChange={setSelectedTaskId}
-                                            options={[
-                                                { value: '', label: 'Select a task...' },
-                                                ...tasks.map((task) => {
-                                                    const project = projects.find(p => p.id === task.project_id)
-                                                    return {
-                                                        value: task.id,
-                                                        label: `${task.title}${project ? ` (${project.name})` : ''}`
-                                                    }
-                                                })
-                                            ]}
-                                            placeholder="Select a task..."
-                                        />
+                                        <>
+                                            <div className="flex justify-between items-center">
+                                                <label className="text-sm font-medium text-zinc-400">{locale === 'es' ? 'Tarea' : 'Task'}</label>
+                                                {!isCreatingTask && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setIsCreatingTask(true)
+                                                            setNewTaskTitle('')
+                                                            setSelectedProjectForNewTask('')
+                                                        }}
+                                                        className="text-xs text-primary-400 hover:text-primary-300 font-semibold transition-colors flex items-center gap-1"
+                                                    >
+                                                        <Plus size={12} /> {locale === 'es' ? 'Crear Tarea' : 'Create Task'}
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {isCreatingTask ? (
+                                                <div className="space-y-3 p-4 bg-white/[0.02] border border-white/5 rounded-2xl relative">
+                                                    <CustomSelect
+                                                        label={locale === 'es' ? 'Proyecto' : 'Project'}
+                                                        value={selectedProjectForNewTask}
+                                                        onChange={setSelectedProjectForNewTask}
+                                                        options={[
+                                                            { value: '', label: locale === 'es' ? 'Seleccionar proyecto...' : 'Select a project...' },
+                                                            ...projects.map((proj) => ({
+                                                                value: proj.id,
+                                                                label: proj.name
+                                                            }))
+                                                        ]}
+                                                        placeholder={locale === 'es' ? 'Seleccionar proyecto...' : 'Select a project...'}
+                                                    />
+
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-zinc-400">{locale === 'es' ? 'Nombre de Tarea' : 'Task Name'}</label>
+                                                        <input
+                                                            type="text"
+                                                            value={newTaskTitle}
+                                                            onChange={(e) => setNewTaskTitle(e.target.value)}
+                                                            placeholder={locale === 'es' ? 'Escribe el nombre de la tarea...' : 'Enter task name...'}
+                                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-zinc-600 focus:outline-none focus:border-primary-500/50"
+                                                        />
+                                                    </div>
+
+                                                    <div className="flex gap-2 pt-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleCreateTask}
+                                                            disabled={!newTaskTitle.trim() || !selectedProjectForNewTask || isCreatingTaskLoading}
+                                                            className="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold rounded-xl transition-colors text-sm"
+                                                        >
+                                                            {isCreatingTaskLoading ? '...' : (locale === 'es' ? 'Crear' : 'Create')}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setIsCreatingTask(false)
+                                                                setNewTaskTitle('')
+                                                                setSelectedProjectForNewTask('')
+                                                            }}
+                                                            className="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-colors text-sm"
+                                                        >
+                                                            {locale === 'es' ? 'Cancelar' : 'Cancel'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <CustomSelect
+                                                    value={selectedTaskId}
+                                                    onChange={setSelectedTaskId}
+                                                    options={[
+                                                        { value: '', label: locale === 'es' ? 'Seleccionar tarea...' : 'Select a task...' },
+                                                        ...tasks.map((task) => {
+                                                            const project = projects.find(p => p.id === task.project_id)
+                                                            return {
+                                                                value: task.id,
+                                                                label: `${task.title}${project ? ` (${project.name})` : ''}`
+                                                            }
+                                                        })
+                                                    ]}
+                                                    placeholder={locale === 'es' ? 'Seleccionar tarea...' : 'Select a task...'}
+                                                />
+                                            )}
+                                        </>
                                     )}
                                 </div>
 

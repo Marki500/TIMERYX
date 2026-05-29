@@ -3,10 +3,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, Folder, CheckSquare, Search } from 'lucide-react'
+import { X, Clock, Folder, CheckSquare, Search, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useUserStore } from '@/stores/useUserStore'
+import { useTaskStore } from '@/stores/useTaskStore'
+import { useTranslation } from '@/stores/useLocaleStore'
 import { cn } from '@/lib/utils'
 import { format, set, addMinutes } from 'date-fns'
 
@@ -25,6 +27,7 @@ interface BulkTimeEntryModalProps {
 export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded }: BulkTimeEntryModalProps) {
     const { projects, fetchProjects } = useProjectStore()
     const { currentWorkspace } = useUserStore()
+    const { t, locale } = useTranslation()
     const supabaseRef = useRef(createClient())
 
     const [mounted, setMounted] = useState(false)
@@ -42,6 +45,11 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
     const [projectSearch, setProjectSearch] = useState('')
     const [taskSearch, setTaskSearch] = useState('')
 
+    // Inline task creation state
+    const [isCreatingTask, setIsCreatingTask] = useState(false)
+    const [newTaskTitle, setNewTaskTitle] = useState('')
+    const [isCreatingTaskLoading, setIsCreatingTaskLoading] = useState(false)
+
     useEffect(() => {
         setMounted(true)
         return () => setMounted(false)
@@ -55,6 +63,8 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
             setHours('')
             setMinutes('0')
             setDescription('')
+            setIsCreatingTask(false)
+            setNewTaskTitle('')
         }
     }, [isOpen, currentWorkspace, fetchProjects])
 
@@ -81,6 +91,30 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
         setTaskSearch('')
         fetchProjectTasks()
     }, [selectedProjectId])
+
+    const handleCreateTask = async () => {
+        if (!newTaskTitle.trim() || !selectedProjectId) return
+        setIsCreatingTaskLoading(true)
+        try {
+            const { createTask } = useTaskStore.getState()
+            const newTask = await createTask({
+                title: newTaskTitle.trim(),
+                project_id: selectedProjectId,
+                status: 'todo'
+            })
+            if (newTask) {
+                // Add the newly created task to our local tasks state
+                setTasks(prev => [newTask, ...prev])
+                setSelectedTaskId(newTask.id)
+                setIsCreatingTask(false)
+                setNewTaskTitle('')
+            }
+        } catch (error) {
+            console.error('Failed to quick-create task:', error)
+        } finally {
+            setIsCreatingTaskLoading(false)
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -200,56 +234,113 @@ export function BulkTimeEntryModal({ isOpen, onClose, selectedDate, onEntryAdded
 
                             {/* Task Selection */}
                             <div className="space-y-2 relative">
-                                <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
-                                    <CheckSquare size={14} /> Task
-                                </label>
-                                <button
-                                    type="button"
-                                    disabled={!selectedProjectId}
-                                    onClick={() => {
-                                        setShowTaskDropdown(!showTaskDropdown)
-                                        setShowProjectDropdown(false)
-                                    }}
-                                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {selectedTaskId 
-                                        ? tasks.find(t => t.id === selectedTaskId)?.title 
-                                        : <span className="text-zinc-500">{!selectedProjectId ? 'Select a project first' : 'Select Task...'}</span>}
-                                </button>
+                                <div className="flex justify-between items-center">
+                                    <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
+                                        <CheckSquare size={14} /> {locale === 'es' ? 'Tarea' : 'Task'}
+                                    </label>
+                                    {selectedProjectId && !isCreatingTask && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsCreatingTask(true)
+                                                setNewTaskTitle('')
+                                            }}
+                                            className="text-xs text-primary-400 hover:text-primary-300 font-semibold transition-colors flex items-center gap-1"
+                                        >
+                                            <Plus size={12} /> {locale === 'es' ? 'Crear Tarea' : 'Create Task'}
+                                        </button>
+                                    )}
+                                </div>
 
-                                {showTaskDropdown && (
-                                    <div className="absolute top-full left-0 mt-2 w-full bg-[#18181b] border border-white/10 rounded-xl shadow-xl overflow-hidden z-20">
-                                        <div className="p-2 border-b border-white/5 flex items-center gap-2 px-3">
-                                            <Search size={14} className="text-zinc-500" />
-                                            <input
-                                                autoFocus
-                                                type="text"
-                                                value={taskSearch}
-                                                onChange={(e) => setTaskSearch(e.target.value)}
-                                                placeholder="Search tasks..."
-                                                className="w-full bg-transparent py-1.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none"
-                                            />
-                                        </div>
-                                        <div className="max-h-48 overflow-y-auto">
-                                            {tasks.length === 0 ? (
-                                                <div className="px-4 py-3 text-sm text-zinc-500">No tasks found in this project</div>
-                                            ) : (
-                                                tasks.filter(t => t.title.toLowerCase().includes(taskSearch.toLowerCase())).map((task) => (
-                                                    <button
-                                                        key={task.id}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setSelectedTaskId(task.id)
-                                                            setShowTaskDropdown(false)
-                                                        }}
-                                                        className="w-full text-left px-4 py-3 text-sm text-zinc-400 hover:bg-white/5 hover:text-white"
-                                                    >
-                                                        {task.title}
-                                                    </button>
-                                                ))
-                                            )}
-                                        </div>
+                                {isCreatingTask ? (
+                                    <div className="flex gap-2">
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            value={newTaskTitle}
+                                            onChange={(e) => setNewTaskTitle(e.target.value)}
+                                            placeholder={locale === 'es' ? 'Escribe el nombre de la tarea...' : 'Enter task name...'}
+                                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-zinc-600 focus:outline-none focus:border-primary-500/50"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault()
+                                                    handleCreateTask()
+                                                } else if (e.key === 'Escape') {
+                                                    setIsCreatingTask(false)
+                                                    setNewTaskTitle('')
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleCreateTask}
+                                            disabled={!newTaskTitle.trim() || isCreatingTaskLoading}
+                                            className="px-4 py-2.5 bg-primary-600 hover:bg-primary-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold rounded-xl transition-colors text-sm"
+                                        >
+                                            {isCreatingTaskLoading ? '...' : (locale === 'es' ? 'Crear' : 'Create')}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsCreatingTask(false)
+                                                setNewTaskTitle('')
+                                            }}
+                                            className="px-3 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-colors text-sm"
+                                        >
+                                            {locale === 'es' ? 'Cancelar' : 'Cancel'}
+                                        </button>
                                     </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            type="button"
+                                            disabled={!selectedProjectId}
+                                            onClick={() => {
+                                                setShowTaskDropdown(!showTaskDropdown)
+                                                setShowProjectDropdown(false)
+                                            }}
+                                            className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {selectedTaskId 
+                                                ? tasks.find(t => t.id === selectedTaskId)?.title 
+                                                : <span className="text-zinc-500">{!selectedProjectId ? (locale === 'es' ? 'Selecciona un proyecto primero' : 'Select a project first') : (locale === 'es' ? 'Seleccionar Tarea...' : 'Select Task...')}</span>}
+                                        </button>
+
+                                        {showTaskDropdown && (
+                                            <div className="absolute top-full left-0 mt-2 w-full bg-[#18181b] border border-white/10 rounded-xl shadow-xl overflow-hidden z-20">
+                                                <div className="p-2 border-b border-white/5 flex items-center gap-2 px-3">
+                                                    <Search size={14} className="text-zinc-500" />
+                                                    <input
+                                                        autoFocus
+                                                        type="text"
+                                                        value={taskSearch}
+                                                        onChange={(e) => setTaskSearch(e.target.value)}
+                                                        placeholder={locale === 'es' ? 'Buscar tareas...' : 'Search tasks...'}
+                                                        className="w-full bg-transparent py-1.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none"
+                                                    />
+                                                </div>
+                                                <div className="max-h-48 overflow-y-auto">
+                                                    {tasks.length === 0 ? (
+                                                        <div className="px-4 py-3 text-sm text-zinc-500">{locale === 'es' ? 'No se encontraron tareas' : 'No tasks found in this project'}</div>
+                                                    ) : (
+                                                        tasks.filter(t => t.title.toLowerCase().includes(taskSearch.toLowerCase())).map((task) => (
+                                                            <button
+                                                                key={task.id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setSelectedTaskId(task.id)
+                                                                    setShowTaskDropdown(false)
+                                                                }}
+                                                                className="w-full text-left px-4 py-3 text-sm text-zinc-400 hover:bg-white/5 hover:text-white"
+                                                            >
+                                                                {task.title}
+                                                            </button>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
 
