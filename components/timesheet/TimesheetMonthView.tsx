@@ -332,8 +332,8 @@ export function TimesheetMonthView() {
 
         try {
             const supabase = supabaseRef.current
-            const { error } = await supabase
-                .from('time_entries')
+            const { error } = await (supabase
+                .from('time_entries') as any)
                 .update({
                     start_time: newStart.toISOString(),
                     end_time: newEnd ? newEnd.toISOString() : null
