@@ -98,7 +98,7 @@ export function ProjectChat({ projectId, userType }: ProjectChatProps) {
         }
 
         // Get unique user IDs
-        const userIds = [...new Set(messagesData.map((m: any) => m.user_id))]
+        const userIds: string[] = [...new Set(messagesData.map((m: any) => m.user_id) as string[])]
 
         // Fetch profiles for these users
         const { data: profilesData } = await (supabase

@@ -13,7 +13,12 @@ type Project = {
     name: string
     color: string
     budget_hours_monthly: number
-    description?: string
+    description: string | null
+    created_at: string
+    workspace_id: string
+    is_client_visible: boolean
+    url: string | null
+    updated_at: string
 }
 
 type Task = {
@@ -34,7 +39,8 @@ export default function ClientProjectDetail() {
 
     useEffect(() => {
         async function loadProject() {
-            if (!params.id) return
+            const projectId = Array.isArray(params.id) ? params.id[0] : params.id
+            if (!projectId) return
 
             setLoading(true)
 
@@ -42,7 +48,7 @@ export default function ClientProjectDetail() {
             const { data: projectData, error } = await supabase
                 .from('projects')
                 .select('*')
-                .eq('id', params.id)
+                .eq('id', projectId)
                 .eq('is_client_visible', true)
                 .single()
 
@@ -55,7 +61,7 @@ export default function ClientProjectDetail() {
 
             // Fetch tasks
             const { data: tasksData } = await (supabase.rpc as any)('get_tasks_with_duration', {
-                p_project_id: params.id
+                p_project_id: projectId
             })
 
             if (tasksData) {

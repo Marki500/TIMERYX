@@ -45,6 +45,7 @@ interface TimeLogTableProps {
 export function TimeLogTable({ filters }: TimeLogTableProps) {
     const [entries, setEntries] = useState<TimeEntryLog[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [isExporting, setIsExporting] = useState(false)
     const [addDate, setAddDate] = useState<string | null>(null)
     const [editEntry, setEditEntry] = useState<EntryToEdit | null>(null)
     const [openMenuDate, setOpenMenuDate] = useState<string | null>(null)
@@ -52,8 +53,8 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
     const { openCreateModal } = useTaskStore()
     const { addToast } = useToast()
 
-    const fetchEntries = async () => {
-        setIsLoading(true)
+    const fetchEntries = async (limit?: number) => {
+        if (limit !== undefined) setIsLoading(true)
         const supabase = createClient()
 
         let startDate = new Date()
@@ -70,7 +71,7 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
             startDate.setDate(startDate.getDate() - 7)
         }
 
-        const { data, error } = await supabase
+        let query = supabase
             .from('time_entries')
             .select(`
                 id,
@@ -93,7 +94,12 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
             .gte('start_time', startDate.toISOString())
             .lte('start_time', endDate.toISOString())
             .order('start_time', { ascending: false })
-            .limit(100)
+
+        if (limit !== undefined) {
+            query = query.limit(limit)
+        }
+
+        const { data, error } = await query
 
         if (!error && data) {
             let filteredData = data as any[]
@@ -105,9 +111,26 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
                 filteredData = filteredData.filter(e => e.task?.status === filters.taskStatus)
             }
 
-            setEntries(filteredData)
+            return filteredData
         }
+        if (limit !== undefined) setIsLoading(false)
+        return []
+    }
+
+    const loadEntries = async () => {
+        const data = await fetchEntries(100)
+        setEntries(data)
         setIsLoading(false)
+    }
+
+    const handleExport = async (action: (data: TimeEntryLog[]) => void) => {
+        setIsExporting(true)
+        try {
+            const data = (await fetchEntries()) as TimeEntryLog[]
+            action(data)
+        } finally {
+            setIsExporting(false)
+        }
     }
 
     const deleteEntry = async (id: string) => {
@@ -117,11 +140,11 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
             addToast('Failed to delete entry.', 'error')
         } else {
             addToast('Entry deleted.', 'success')
-            fetchEntries()
+            loadEntries()
         }
     }
 
-    useEffect(() => { fetchEntries() }, [filters])
+    useEffect(() => { loadEntries() }, [filters])
 
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -172,32 +195,36 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                         <button
-                            onClick={() => exportToCSV(entries, `timeryx_reporte_${format(new Date(), 'yyyy-MM-dd')}.csv`)}
-                            className="px-4 py-2 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 hover:from-emerald-500/20 hover:to-teal-500/20 transition-all flex items-center gap-2"
+                            onClick={() => handleExport((data) => exportToCSV(data, `timeryx_reporte_${format(new Date(), 'yyyy-MM-dd')}.csv`))}
+                            disabled={isExporting}
+                            className="px-4 py-2 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 hover:from-emerald-500/20 hover:to-teal-500/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <Download className="w-4 h-4" />
-                            <span className="font-medium">Exportar CSV</span>
+                            <span className="font-medium">{isExporting ? 'Exportando…' : 'Exportar CSV'}</span>
                         </button>
                         <button
-                            onClick={() => exportToPDF(entries, `timeryx_reporte_${format(new Date(), 'yyyy-MM-dd')}.pdf`)}
-                            className="px-4 py-2 bg-gradient-to-br from-rose-500/10 to-pink-500/10 border border-rose-500/20 rounded-xl text-rose-400 hover:from-rose-500/20 hover:to-pink-500/20 transition-all flex items-center gap-2"
+                            onClick={() => handleExport((data) => exportToPDF(data, `timeryx_reporte_${format(new Date(), 'yyyy-MM-dd')}.pdf`))}
+                            disabled={isExporting}
+                            className="px-4 py-2 bg-gradient-to-br from-rose-500/10 to-pink-500/10 border border-rose-500/20 rounded-xl text-rose-400 hover:from-rose-500/20 hover:to-pink-500/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <FileText className="w-4 h-4" />
-                            <span className="font-medium">Exportar PDF</span>
+                            <span className="font-medium">{isExporting ? 'Exportando…' : 'Exportar PDF'}</span>
                         </button>
                         <button
-                            onClick={() => exportMonthlyProjectPDF(entries, `timeryx_resumen_proyectos_${format(new Date(), 'yyyy-MM-dd')}.pdf`)}
-                            className="px-4 py-2 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 hover:from-indigo-500/20 hover:to-purple-500/20 transition-all flex items-center gap-2"
+                            onClick={() => handleExport((data) => exportMonthlyProjectPDF(data, { filename: `timeryx_resumen_proyectos_${format(new Date(), 'yyyy-MM-dd')}.pdf`, includeTotal: true }))}
+                            disabled={isExporting}
+                            className="px-4 py-2 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 hover:from-indigo-500/20 hover:to-purple-500/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <FileText className="w-4 h-4" />
-                            <span className="font-medium">Resumen Proyectos (PDF)</span>
+                            <span className="font-medium">{isExporting ? 'Exportando…' : 'Resumen Proyectos (PDF)'}</span>
                         </button>
                         <button
-                            onClick={() => exportMonthlyProjectNoTotalPDF(entries, `timeryx_resumen_proyectos_sin_total_${format(new Date(), 'yyyy-MM-dd')}.pdf`)}
-                            className="px-4 py-2 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl text-cyan-400 hover:from-cyan-500/20 hover:to-blue-500/20 transition-all flex items-center gap-2"
+                            onClick={() => handleExport((data) => exportMonthlyProjectNoTotalPDF(data, `timeryx_resumen_proyectos_sin_total_${format(new Date(), 'yyyy-MM-dd')}.pdf`))}
+                            disabled={isExporting}
+                            className="px-4 py-2 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl text-cyan-400 hover:from-cyan-500/20 hover:to-blue-500/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <FileText className="w-4 h-4" />
-                            <span className="font-medium">Resumen Proyectos Sin Total (PDF)</span>
+                            <span className="font-medium">{isExporting ? 'Exportando…' : 'Resumen Proyectos Sin Total (PDF)'}</span>
                         </button>
                     </div>
                 </div>
@@ -345,7 +372,7 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
                 isOpen={!!editEntry}
                 onClose={() => setEditEntry(null)}
                 entry={editEntry}
-                onSaved={() => { setEditEntry(null); fetchEntries() }}
+                onSaved={() => { setEditEntry(null); loadEntries() }}
             />
         </>
     )

@@ -5,12 +5,17 @@ import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/supabase'
 
 type TimeEntry = Database['public']['Tables']['time_entries']['Row']
+type Profile = Database['public']['Tables']['profiles']['Row']
+
+type ActiveEntryWithTask = TimeEntry & {
+    task: { title: string } | null
+}
 
 interface TimerState {
     activeEntry: TimeEntry | null
     taskTitle: string | null
     isLoading: boolean
-    duration: number // in seconds
+    duration: number
     isPaused: boolean
     pausedAt: number | null
 
@@ -20,14 +25,13 @@ interface TimerState {
     resumeTimer: () => void
     fetchActiveTimer: () => Promise<void>
     tick: () => void
-    loadFromStorage: () => void
+    loadFromStorage: () => Promise<void>
     addManualEntry: (taskId: string, durationSeconds: number, date: string) => Promise<void>
     setTaskDuration: (taskId: string, newTotalSeconds: number, targetDate?: string) => Promise<void>
 }
 
 const STORAGE_KEY = 'timeryx_active_timer'
 
-// Callback registry — decouples timer store from task/dashboard stores
 type RefreshCallback = () => void
 type TaskUpdateCallback = (taskId: string, addedSeconds: number) => void
 
@@ -54,20 +58,14 @@ export const useTimerStore = create<TimerState>((set, get) => ({
     isPaused: false,
     pausedAt: null,
 
-    serverTimeOffset: 0, // difference between server time and client time
-
     loadFromStorage: async () => {
         if (typeof window === 'undefined') return
 
-        // Instead of loading from localStorage, fetch from database
-        // This ensures we always have the correct state
         await get().fetchActiveTimer()
 
-        // Clean up any stale localStorage data
         const stored = localStorage.getItem(STORAGE_KEY)
         if (stored) {
             const { activeEntry } = get()
-            // If there's no active entry in DB, clear localStorage
             if (!activeEntry) {
                 localStorage.removeItem(STORAGE_KEY)
             }
@@ -76,18 +74,19 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
     startTimer: async (taskId, taskTitle, description) => {
         const tempEntryId = `temp-${Date.now()}`
+        const now = new Date().toISOString()
         const tempEntry: TimeEntry = {
             id: tempEntryId,
             task_id: taskId,
-            start_time: new Date().toISOString(),
+            user_id: 'temp-user',
+            start_time: now,
             end_time: null,
-            user_id: 'temp-user', // Not needed for UI usually
-            description: description || null,
+            description: description ?? null,
             is_manual: false,
-            created_at: new Date().toISOString()
+            created_at: now,
+            updated_at: now
         }
 
-        // Optimistic UI Update
         set({
             activeEntry: tempEntry,
             taskTitle,
@@ -98,15 +97,13 @@ export const useTimerStore = create<TimerState>((set, get) => ({
         })
 
         const supabase = createClient()
-        // Call RPC to start timer (handles stopping previous one)
-        const { data, error } = await (supabase.rpc as any)('start_timer', {
+        const { error } = await supabase.rpc('start_timer', {
             p_task_id: taskId,
-            p_description: description
+            p_description: description ?? null
         })
 
         if (error) {
             console.error('Error starting timer:', error)
-            // Rollback optimistic update
             set({
                 activeEntry: null,
                 taskTitle: null,
@@ -115,10 +112,8 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             return
         }
 
-        // Refresh active timer silently in background to get real IDs
         await get().fetchActiveTimer()
 
-        // Save to localStorage
         if (typeof window !== 'undefined') {
             const state = get()
             localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -140,7 +135,6 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             pausedAt: get().pausedAt
         }
 
-        // Optimistic UI Update: Clear immediately
         set({
             activeEntry: null,
             taskTitle: null,
@@ -154,32 +148,26 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             localStorage.removeItem(STORAGE_KEY)
         }
 
-        // Notify registered listeners to update task duration optimistically
         const taskId = previousState.activeEntry?.task_id
         if (taskId) {
             taskUpdateCallbacks.forEach(cb => cb(taskId, previousState.duration))
         }
 
         const supabase = createClient()
-
-        // Call RPC to stop timer
         const { error } = await supabase.rpc('stop_timer')
 
         if (error) {
             console.error('Error stopping timer via RPC:', error)
 
-            // Rollback optimistic update
             set(previousState)
             if (typeof window !== 'undefined') {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(previousState))
             }
 
-            // Fallback: try to manually clear the active_timer_id
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
-                // @ts-ignore
-                const { error: updateError } = await (supabase
-                    .from('profiles') as any)
+                const { error: updateError } = await supabase
+                    .from('profiles')
                     .update({ active_timer_id: null })
                     .eq('id', user.id)
 
@@ -188,7 +176,6 @@ export const useTimerStore = create<TimerState>((set, get) => ({
                 }
             }
         } else {
-            // Notify registered listeners to refresh data
             refreshCallbacks.forEach(cb => cb())
         }
     },
@@ -199,7 +186,6 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
         set({ isPaused: true, pausedAt: Date.now() })
 
-        // Save to localStorage
         if (typeof window !== 'undefined') {
             const state = get()
             localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -218,7 +204,6 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
         set({ isPaused: false, pausedAt: null })
 
-        // Save to localStorage
         if (typeof window !== 'undefined') {
             const state = get()
             localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -236,55 +221,47 @@ export const useTimerStore = create<TimerState>((set, get) => ({
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        // Get user profile and server time hint
-        const startFetch = Date.now()
-        const { data: profile, error: profileError } = await (supabase
+        const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('active_timer_id')
             .eq('id', user.id)
-            .single() as any)
+            .single<Pick<Profile, 'active_timer_id'>>()
 
-        if (profileError) return
-
-        if (profile?.active_timer_id) {
-            // Fetch the actual time entry with task title
-            const { data: entry } = await supabase
-                .from('time_entries')
-                .select('*, task:tasks(title)')
-                .eq('id', profile.active_timer_id)
-                .single()
-
-            if (entry) {
-                // Calculate initial duration using server time compensation
-                // Note: We use start_time which is a TIMESTAMPTZ from Postgres
-                const start = new Date((entry as any).start_time).getTime()
-                const now = Date.now()
-
-                // If we want to be really precise, we should account for network latency
-                // but for now let's just use client time. 
-                // A common issue is the client clock being wrong.
-
-                const seconds = Math.max(0, Math.floor((now - start) / 1000))
-
-                // Extract title from joined relation
-                const title = (entry as any).task?.title || null
-
-                set({ activeEntry: entry, taskTitle: title, duration: seconds })
+        if (profileError || !profile?.active_timer_id) {
+            if (!profileError) {
+                set({ activeEntry: null, taskTitle: null, duration: 0 })
             }
-        } else {
-            set({ activeEntry: null, taskTitle: null, duration: 0 })
+            return
         }
+
+        const { data: entry } = await supabase
+            .from('time_entries')
+            .select('*, task:tasks(title)')
+            .eq('id', profile.active_timer_id)
+            .single<ActiveEntryWithTask>()
+
+        if (!entry) {
+            set({ activeEntry: null, taskTitle: null, duration: 0 })
+            return
+        }
+
+        const start = new Date(entry.start_time).getTime()
+        const now = Date.now()
+        const seconds = Math.max(0, Math.floor((now - start) / 1000))
+
+        set({
+            activeEntry: entry,
+            taskTitle: entry.task?.title ?? null,
+            duration: seconds
+        })
     },
 
     tick: () => {
         const { activeEntry, isPaused } = get()
         if (activeEntry && !isPaused) {
-            // Calculate actual elapsed time to prevent browser background throttling
-            // Using the same logic as fetchActiveTimer to maintain consistency
-            const start = new Date((activeEntry as any).start_time).getTime()
+            const start = new Date(activeEntry.start_time).getTime()
             const now = Date.now()
             const elapsed = Math.max(0, Math.floor((now - start) / 1000))
-
             set({ duration: elapsed })
         }
     },
@@ -294,12 +271,10 @@ export const useTimerStore = create<TimerState>((set, get) => ({
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('Not authenticated')
 
-        // Create start and end times based on the date and duration
-        const startTime = new Date(date + 'T12:00:00') // Default to noon
+        const startTime = new Date(date + 'T12:00:00')
         const endTime = new Date(startTime.getTime() + durationSeconds * 1000)
 
-        // Use RPC function to add manual entry (bypasses RLS with proper permission checks)
-        const { data, error } = await (supabase.rpc as any)('add_manual_time_entry', {
+        const { error } = await supabase.rpc('add_manual_time_entry', {
             p_task_id: taskId,
             p_start_time: startTime.toISOString(),
             p_end_time: endTime.toISOString(),
@@ -311,7 +286,6 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             throw error
         }
 
-        // Notify registered listeners to refresh data
         refreshCallbacks.forEach(cb => cb())
     },
 
@@ -320,10 +294,8 @@ export const useTimerStore = create<TimerState>((set, get) => ({
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('Not authenticated')
 
-        // 1. Fetch all existing time entries for this task to compute current total
-        // Also fetch the task to get its created_at as a fallback
-        const { data: entries, error: fetchError } = await (supabase
-            .from('time_entries') as any)
+        const { data: entries, error: fetchError } = await supabase
+            .from('time_entries')
             .select('*')
             .eq('task_id', taskId)
             .eq('user_id', user.id)
@@ -334,8 +306,8 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             throw fetchError
         }
 
-        // Calculate current total from entries
-        const currentTotal = (entries || []).reduce((sum: number, e: any) => {
+        const list = entries ?? []
+        const currentTotal = list.reduce((sum, e) => {
             if (!e.end_time) return sum
             const dur = (new Date(e.end_time).getTime() - new Date(e.start_time).getTime()) / 1000
             return sum + Math.max(0, dur)
@@ -343,25 +315,19 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
         const diff = newTotalSeconds - currentTotal
 
-        if (Math.abs(diff) < 1) {
-            // No meaningful change
-            return
-        }
+        if (Math.abs(diff) < 1) return
 
         if (diff > 0) {
-            // ADDING TIME: create a new manual entry with the positive diff
             let startTime: Date
 
             if (targetDate) {
-                // If a targetDate is provided (e.g. "2024-03-05"), use it at noon
                 startTime = new Date(targetDate + 'T12:00:00')
             } else {
-                // Fallback: get the task's created_at to attribute time to the task's day
-                const { data: task } = await (supabase
-                    .from('tasks') as any)
+                const { data: task } = await supabase
+                    .from('tasks')
                     .select('created_at')
                     .eq('id', taskId)
-                    .single()
+                    .single<Pick<Database['public']['Tables']['tasks']['Row'], 'created_at'>>()
 
                 if (task?.created_at) {
                     startTime = new Date(task.created_at)
@@ -373,7 +339,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
             const endTime = new Date(startTime.getTime() + diff * 1000)
 
-            const { error: insertError } = await (supabase.rpc as any)('add_manual_time_entry', {
+            const { error: insertError } = await supabase.rpc('add_manual_time_entry', {
                 p_task_id: taskId,
                 p_start_time: startTime.toISOString(),
                 p_end_time: endTime.toISOString(),
@@ -385,12 +351,11 @@ export const useTimerStore = create<TimerState>((set, get) => ({
                 throw insertError
             }
         } else {
-            // REDUCING TIME: collect entries to delete/shorten, then execute in bulk
             let remaining = Math.abs(diff)
             const idsToDelete: string[] = []
             let entryToShorten: { id: string; newEndTime: string } | null = null
 
-            for (const entry of (entries || [])) {
+            for (const entry of list) {
                 if (remaining <= 0) break
                 if (!entry.end_time) continue
 
@@ -408,22 +373,24 @@ export const useTimerStore = create<TimerState>((set, get) => ({
                 }
             }
 
-            // Single bulk delete instead of N sequential deletes
             if (idsToDelete.length > 0) {
-                const { error: deleteError } = await (supabase.from('time_entries') as any)
+                const { error: deleteError } = await supabase
+                    .from('time_entries')
                     .delete()
                     .in('id', idsToDelete)
+
                 if (deleteError) {
                     console.error('Error deleting time entries:', deleteError)
                     throw deleteError
                 }
             }
 
-            // Single update for the shortened entry
             if (entryToShorten) {
-                const { error: shortenError } = await (supabase.from('time_entries') as any)
+                const { error: shortenError } = await supabase
+                    .from('time_entries')
                     .update({ end_time: entryToShorten.newEndTime })
                     .eq('id', entryToShorten.id)
+
                 if (shortenError) {
                     console.error('Error shortening time entry:', shortenError)
                     throw shortenError
@@ -431,7 +398,6 @@ export const useTimerStore = create<TimerState>((set, get) => ({
             }
         }
 
-        // Notify registered listeners to refresh data
         refreshCallbacks.forEach(cb => cb())
     }
 }))
