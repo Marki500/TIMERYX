@@ -158,6 +158,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
         if (error) {
             console.error('Error updating task:', error)
+            throw error
         } else {
             // Check for assignment trigger (running after update to ensure success)
             // We need previous state to know if it changed, which we grabbed optimistically or via find

@@ -8,6 +8,7 @@ import { useTaskStore, Task } from '@/stores/useTaskStore'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useTimerStore } from '@/stores/useTimerStore'
+import { useToast } from '@/stores/useToast'
 import { cn } from '@/lib/utils'
 import { Database } from '@/types/supabase'
 
@@ -21,6 +22,7 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
     const { updateTask, deleteTask } = useTaskStore()
     const { projects, fetchProjects } = useProjectStore()
     const { currentWorkspace } = useUserStore()
+    const { addToast } = useToast()
 
     const [mounted, setMounted] = useState(false)
     const [title, setTitle] = useState('')
@@ -117,9 +119,11 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
                 await useTimerStore.getState().setTaskDuration(task.id, totalDurationSeconds, dueDate)
             }
 
+            addToast('Task updated.', 'success')
             onClose()
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to update task:', error)
+            addToast(error?.message || 'Failed to save changes. Please try again.', 'error')
         } finally {
             setIsSubmitting(false)
         }
@@ -131,10 +135,11 @@ export function EditTaskDialog({ isOpen, onClose, task }: EditTaskDialogProps) {
         setIsSubmitting(true)
         try {
             await deleteTask(task.id)
+            addToast('Task deleted.', 'success')
             onClose()
         } catch (error: any) {
             console.error('Failed to delete task:', error)
-            alert(error.message)
+            addToast(error?.message || 'Failed to delete task.', 'error')
         } finally {
             setIsSubmitting(false)
             setShowDeleteConfirm(false)

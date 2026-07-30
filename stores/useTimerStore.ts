@@ -410,16 +410,24 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
             // Single bulk delete instead of N sequential deletes
             if (idsToDelete.length > 0) {
-                await (supabase.from('time_entries') as any)
+                const { error: deleteError } = await (supabase.from('time_entries') as any)
                     .delete()
                     .in('id', idsToDelete)
+                if (deleteError) {
+                    console.error('Error deleting time entries:', deleteError)
+                    throw deleteError
+                }
             }
 
             // Single update for the shortened entry
             if (entryToShorten) {
-                await (supabase.from('time_entries') as any)
+                const { error: shortenError } = await (supabase.from('time_entries') as any)
                     .update({ end_time: entryToShorten.newEndTime })
                     .eq('id', entryToShorten.id)
+                if (shortenError) {
+                    console.error('Error shortening time entry:', shortenError)
+                    throw shortenError
+                }
             }
         }
 
