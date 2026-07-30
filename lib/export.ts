@@ -91,11 +91,15 @@ export function exportToPDF(entries: TimeEntry[], filename: string = 'time_entri
         const hours = Math.floor(durationSeconds / 3600)
         const minutes = Math.floor((durationSeconds % 3600) / 60)
         const durationFormatted = `${hours}h ${minutes}m`
+        const description = entry.description && entry.description.trim().length > 0
+            ? entry.description.trim()
+            : ''
 
         return [
             format(start, 'dd/MM/yyyy'),
             format(start, 'HH:mm'),
             entry.task.title,
+            description,
             entry.task.project?.name || '-',
             statusLabels[entry.task.status] || entry.task.status,
             durationFormatted
@@ -104,7 +108,7 @@ export function exportToPDF(entries: TimeEntry[], filename: string = 'time_entri
 
     // Add table
     autoTable(doc, {
-        head: [['Fecha', 'Hora', 'Tarea', 'Proyecto', 'Estado', 'Duración']],
+        head: [['Fecha', 'Hora', 'Tarea', 'Descripción', 'Proyecto', 'Estado', 'Duración']],
         body: tableData,
         startY: 35,
         theme: 'grid',
@@ -116,10 +120,34 @@ export function exportToPDF(entries: TimeEntry[], filename: string = 'time_entri
         },
         bodyStyles: {
             fontSize: 9,
-            textColor: [50, 50, 50]
+            textColor: [50, 50, 50],
+            valign: 'top',
+            cellPadding: 3
         },
         alternateRowStyles: {
             fillColor: [245, 245, 245]
+        },
+        columnStyles: {
+            0: { cellWidth: 18 },
+            1: { cellWidth: 14 },
+            2: { cellWidth: 36 },
+            3: { cellWidth: 58 },
+            4: { cellWidth: 30 },
+            5: { cellWidth: 22 },
+            6: { cellWidth: 18, halign: 'right' }
+        },
+        didParseCell: (data) => {
+            // Subtle italic styling for the description column on data rows
+            if (data.section === 'body' && data.column.index === 3) {
+                const raw = (data.cell.raw ?? '').toString()
+                if (raw.length > 0) {
+                    data.cell.styles.fontStyle = 'italic'
+                    data.cell.styles.textColor = [90, 90, 90]
+                    data.cell.styles.lineColor = [230, 230, 235]
+                } else {
+                    data.cell.styles.textColor = [190, 190, 195]
+                }
+            }
         },
         margin: { top: 35 }
     })
@@ -179,7 +207,7 @@ export function exportMonthlyProjectPDF(entries: TimeEntry[], filename: string =
     doc.line(14, 43, 196, 43)
 
     // Aggregate data by project and task
-    interface TaskSummary { title: string; durationSeconds: number }
+    interface TaskSummary { title: string; durationSeconds: number; description: string | null }
     interface ProjectSummary { name: string; color: string; durationSeconds: number; tasks: Record<string, TaskSummary> }
     const projectTotals: Record<string, ProjectSummary> = {}
 
@@ -198,6 +226,9 @@ export function exportMonthlyProjectPDF(entries: TimeEntry[], filename: string =
         const projectName = entry.task.project?.name || 'Sin Proyecto Asignado'
         const projectColor = entry.task.project?.color || '#71717a'
         const taskTitle = entry.task.title
+        const taskDescription = entry.description && entry.description.trim().length > 0
+            ? entry.description.trim()
+            : null
 
         if (!projectTotals[projectId]) {
             projectTotals[projectId] = { name: projectName, color: projectColor, durationSeconds: 0, tasks: {} }
@@ -206,9 +237,17 @@ export function exportMonthlyProjectPDF(entries: TimeEntry[], filename: string =
         projectTotals[projectId].durationSeconds += durationSeconds
 
         if (!projectTotals[projectId].tasks[taskTitle]) {
-            projectTotals[projectId].tasks[taskTitle] = { title: taskTitle, durationSeconds: 0 }
+            projectTotals[projectId].tasks[taskTitle] = { title: taskTitle, durationSeconds: 0, description: null }
         }
         projectTotals[projectId].tasks[taskTitle].durationSeconds += durationSeconds
+
+        // Keep the longest description seen for that task (most informative)
+        if (taskDescription) {
+            const current = projectTotals[projectId].tasks[taskTitle].description
+            if (!current || taskDescription.length > current.length) {
+                projectTotals[projectId].tasks[taskTitle].description = taskDescription
+            }
+        }
     })
 
     // Prepare table data with flat rows (Project Header Row, then Task Rows)
@@ -248,6 +287,23 @@ export function exportMonthlyProjectPDF(entries: TimeEntry[], filename: string =
                         { content: `${tHours}h ${tMinutes}m`, styles: { textColor: [100, 100, 100] } },
                         { content: `${tPercentage} del proyecto`, styles: { textColor: [120, 120, 120], fontSize: 8 } }
                     ])
+
+                    // Description sub-row (only when the task has a description)
+                    if (task.description) {
+                        tableBody.push([
+                            {
+                                content: `          “${task.description}”`,
+                                styles: {
+                                    fontSize: 8,
+                                    fontStyle: 'italic',
+                                    textColor: [110, 110, 120],
+                                    cellPadding: { top: 0, bottom: 4, left: 4, right: 4 }
+                                }
+                            },
+                            { content: '', styles: { cellPadding: { top: 0, bottom: 4 } } },
+                            { content: '', styles: { cellPadding: { top: 0, bottom: 4 } } }
+                        ])
+                    }
                 })
         })
 
@@ -328,7 +384,7 @@ export function exportMonthlyProjectNoTotalPDF(entries: TimeEntry[], filename: s
     doc.line(14, 43, 196, 43)
 
     // Aggregate data by project and task
-    interface TaskSummary { title: string; durationSeconds: number }
+    interface TaskSummary { title: string; durationSeconds: number; description: string | null }
     interface ProjectSummary { name: string; color: string; durationSeconds: number; tasks: Record<string, TaskSummary> }
     const projectTotals: Record<string, ProjectSummary> = {}
 
@@ -347,6 +403,9 @@ export function exportMonthlyProjectNoTotalPDF(entries: TimeEntry[], filename: s
         const projectName = entry.task.project?.name || 'Sin Proyecto Asignado'
         const projectColor = entry.task.project?.color || '#71717a'
         const taskTitle = entry.task.title
+        const taskDescription = entry.description && entry.description.trim().length > 0
+            ? entry.description.trim()
+            : null
 
         if (!projectTotals[projectId]) {
             projectTotals[projectId] = { name: projectName, color: projectColor, durationSeconds: 0, tasks: {} }
@@ -355,9 +414,17 @@ export function exportMonthlyProjectNoTotalPDF(entries: TimeEntry[], filename: s
         projectTotals[projectId].durationSeconds += durationSeconds
 
         if (!projectTotals[projectId].tasks[taskTitle]) {
-            projectTotals[projectId].tasks[taskTitle] = { title: taskTitle, durationSeconds: 0 }
+            projectTotals[projectId].tasks[taskTitle] = { title: taskTitle, durationSeconds: 0, description: null }
         }
         projectTotals[projectId].tasks[taskTitle].durationSeconds += durationSeconds
+
+        // Keep the longest description seen for that task (most informative)
+        if (taskDescription) {
+            const current = projectTotals[projectId].tasks[taskTitle].description
+            if (!current || taskDescription.length > current.length) {
+                projectTotals[projectId].tasks[taskTitle].description = taskDescription
+            }
+        }
     })
 
     // Prepare table data with flat rows (Project Header Row, then Task Rows)
@@ -397,6 +464,23 @@ export function exportMonthlyProjectNoTotalPDF(entries: TimeEntry[], filename: s
                         { content: `${tHours}h ${tMinutes}m`, styles: { textColor: [100, 100, 100] } },
                         { content: `${tPercentage} del proyecto`, styles: { textColor: [120, 120, 120], fontSize: 8 } }
                     ])
+
+                    // Description sub-row (only when the task has a description)
+                    if (task.description) {
+                        tableBody.push([
+                            {
+                                content: `          “${task.description}”`,
+                                styles: {
+                                    fontSize: 8,
+                                    fontStyle: 'italic',
+                                    textColor: [110, 110, 120],
+                                    cellPadding: { top: 0, bottom: 4, left: 4, right: 4 }
+                                }
+                            },
+                            { content: '', styles: { cellPadding: { top: 0, bottom: 4 } } },
+                            { content: '', styles: { cellPadding: { top: 0, bottom: 4 } } }
+                        ])
+                    }
                 })
         })
 
