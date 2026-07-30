@@ -9,6 +9,7 @@ interface TimeEntry {
     description: string | null
     task: {
         title: string
+        description: string | null
         status: string
         project?: {
             name: string
@@ -38,7 +39,7 @@ export function exportToCSV(entries: TimeEntry[], filename: string = 'time_entri
             format(start, 'dd/MM/yyyy'),
             format(start, 'HH:mm'),
             entry.task.title,
-            entry.description || '-',
+            entry.task.description || '-',
             entry.task.project?.name || '-',
             statusLabels[entry.task.status] || entry.task.status,
             durationHours
@@ -91,8 +92,8 @@ export function exportToPDF(entries: TimeEntry[], filename: string = 'time_entri
         const hours = Math.floor(durationSeconds / 3600)
         const minutes = Math.floor((durationSeconds % 3600) / 60)
         const durationFormatted = `${hours}h ${minutes}m`
-        const description = entry.description && entry.description.trim().length > 0
-            ? entry.description.trim()
+        const description = entry.task.description && entry.task.description.trim().length > 0
+            ? entry.task.description.trim()
             : ''
 
         return [
@@ -226,8 +227,8 @@ export function exportMonthlyProjectPDF(entries: TimeEntry[], filename: string =
         const projectName = entry.task.project?.name || 'Sin Proyecto Asignado'
         const projectColor = entry.task.project?.color || '#71717a'
         const taskTitle = entry.task.title
-        const taskDescription = entry.description && entry.description.trim().length > 0
-            ? entry.description.trim()
+        const taskDescription = entry.task.description && entry.task.description.trim().length > 0
+            ? entry.task.description.trim()
             : null
 
         if (!projectTotals[projectId]) {
@@ -403,8 +404,8 @@ export function exportMonthlyProjectNoTotalPDF(entries: TimeEntry[], filename: s
         const projectName = entry.task.project?.name || 'Sin Proyecto Asignado'
         const projectColor = entry.task.project?.color || '#71717a'
         const taskTitle = entry.task.title
-        const taskDescription = entry.description && entry.description.trim().length > 0
-            ? entry.description.trim()
+        const taskDescription = entry.task.description && entry.task.description.trim().length > 0
+            ? entry.task.description.trim()
             : null
 
         if (!projectTotals[projectId]) {

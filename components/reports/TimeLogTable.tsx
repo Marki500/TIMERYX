@@ -20,6 +20,7 @@ interface TimeEntryLog {
     description: string | null
     task: {
         title: string
+        description: string | null
         status: string
         project_id?: string
         project?: {
@@ -80,6 +81,7 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
                 description,
                 task:tasks (
                     title,
+                    description,
                     status,
                     project_id,
                     project:projects (
