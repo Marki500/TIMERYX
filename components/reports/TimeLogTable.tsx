@@ -42,6 +42,11 @@ interface TimeLogTableProps {
     filters?: FilterState
 }
 
+function parseDateInput(value: string, endOfDay: boolean): Date {
+    const [y, m, d] = value.split('-').map(Number)
+    return new Date(y, m - 1, d, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0)
+}
+
 export function TimeLogTable({ filters }: TimeLogTableProps) {
     const [entries, setEntries] = useState<TimeEntryLog[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -61,8 +66,8 @@ export function TimeLogTable({ filters }: TimeLogTableProps) {
         const endDate = new Date()
 
         if (filters?.dateRange === 'custom' && filters.customStartDate) {
-            startDate = new Date(filters.customStartDate)
-            if (filters.customEndDate) endDate.setTime(new Date(filters.customEndDate).getTime())
+            startDate = parseDateInput(filters.customStartDate, false)
+            if (filters.customEndDate) endDate.setTime(parseDateInput(filters.customEndDate, true).getTime())
         } else if (filters?.dateRange === 'last30') {
             startDate.setDate(startDate.getDate() - 30)
         } else if (filters?.dateRange === 'thisMonth') {
